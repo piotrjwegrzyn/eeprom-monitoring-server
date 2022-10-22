@@ -1,35 +1,40 @@
 package main
 
-// import (
-// 	"fmt"
-// 	"log"
+import (
+	"errors"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	common "pi-wegrzyn/common"
+	"time"
+)
 
-// 	"github.com/melbahja/goph"
-// )
+const version string = "0.1-prealpha"
 
 func main() {
 
-	// // Start new ssh connection with private key.
-	// auth, err := goph.Key("path", "")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	var configFilename = flag.String("config", "config/config.yaml", "Path to config file (YAML file)")
+	var info = flag.Bool("version", false, "Print version")
 
-	// client, err := goph.New("login", "IP address", auth)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	flag.Parse()
 
-	// // Defer closing the network connection.
-	// defer client.Close()
+	if *info {
+		fmt.Printf("Current version: %s\n", version)
+		os.Exit(0)
+	}
 
-	// // Execute your command.
-	// out, err := client.Run("ls /tmp/")
+	if _, err := os.Stat(*configFilename); errors.Is(err, os.ErrNotExist) {
+		log.Fatalf("Config file (%s) does not exist\n", *configFilename)
+	}
 
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	log.Println("Backend module started")
 
-	// // Get your output as []byte.
-	// fmt.Println(string(out))
+	config := common.Config{}
+	common.GetConfig(*configFilename, &config)
+
+	log.Printf("Delay set for %d seconds\n", config.Intervals.StartupDelay)
+
+	time.Sleep(time.Duration(config.Intervals.StartupDelay) * time.Second)
+
 }
