@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en_US">
+    <head>
+        <meta charset="utf-8">
+        <title>Sign in</title>
+        <link rel="icon" href="static/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="static/style.css">
+    </head>
+    <body>
+        <div class="form-holder">
+            <form class="form" action="/signin" method="post">
+                <div style="font-size: xx-large;">
+                    SIGN IN
+                </div>
+                <div class="label">LOGIN</div>
+                <div class="input-holder">
+                    <input type="text"
+                        name="login"
+                        pattern="^([-_.a-zA-Z0-9]){2,32}$"
+                        placeholder="type here" required>
+                </div>
+                <div class="label">PASSWORD</div>
+                <div class="input-holder">
+                    <input type="password"
+                        name="password"
+                        placeholder="type here" required>
+                </div>
+                <div class="input-holder">
+                    <input type="submit"
+                            value="SIGN IN">
+                </div>
+                {{ if ne . "" }}
+                <div class="label">{{.}}</div>
+                {{ end }}
+            </form>
+        </div>
+    </body>
+</html>

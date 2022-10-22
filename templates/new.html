@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en_US">
+    <head>
+        <meta charset="utf-8">
+        <title>{{.Action}} device</title>
+        <link rel="icon" href="static/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="static/style.css">
+    </head>
+    <body>
+        <div class="form-holder">
+            <form class="form" action="/{{.Action | ToLower}}" enctype="multipart/form-data" method="post">
+                <div style="font-size: xx-large;">
+                    {{.Action | ToUpper}} DEVICE
+                </div>
+                <div class="label">HOSTNAME</div>
+                <div class="input-holder">
+                    <input type="text"
+                        id="hostname"
+                        name="hostname"
+                        value="{{.Device.Hostname}}"
+                        placeholder="type here" required>
+                </div>
+                <div class="label">IP ADDRESS</div>
+                <div class="input-holder two-elements">
+                    <div class="radiocheck-select" style="grid-column: 1;">
+                        <input style="outline: none !important; min-width: 30px;"
+                            type="radio"
+                            class="radio"
+                            id="ipv4"
+                            name="ip-type"
+                            value="4"
+                            onclick="document.getElementById('ip').pattern = '^((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])$';"
+                            {{if ne .IpVersion 6}}checked{{end}}>
+                        <label class="radiocheck-label" for="ipv4">IPv4</label>
+                    </div>
+                    <div class="radiocheck-select" style="grid-column: 3">
+                        <input style="outline: none !important; min-width: 30px;"
+                            type="radio"
+                            id="ipv6"
+                            name="ip-type"
+                            value="6"
+                            onclick="document.getElementById('ip').pattern = '^((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:)))(%.+)?$'"
+                            {{if eq .IpVersion 6}}checked{{end}}>
+                        <label class="radiocheck-label" for="ipv6">IPv6</label>
+                    </div>
+                </div>
+                <div class="input-holder">
+                    <input type="text"
+                        id="ip"
+                        name="ip"
+                        value="{{.Device.Ip}}"
+                        pattern="{{.IpVersion | GetPattern}}"
+                        placeholder="type here" required>
+                </div>
+                <div class="label">LOGIN</div>
+                <div class="input-holder">
+                    <input type="text"
+                        id="login"
+                        name="login"
+                        value="{{.Device.Login}}"
+                        pattern="^[a-zA-Z][-a-zA-Z0-9\.\_]*[a-zA-Z0-9]$"
+                        placeholder="type here" required>
+                </div>
+                <div class="label">PASSWORD</div>
+                {{if eq .Action "Edit"}}<div class="input-holder">
+                    <div class="radiocheck-select">
+                        <input style="outline: none !important; min-width: 30px;"
+                            type="checkbox"
+                            id="password-clear"
+                            name="password-clear" checked>
+                        <label class="radiocheck-label" for="password-clear">Change previous password (if any)</label>
+                    </div>
+                </div>{{end}}
+                <div class="input-holder">
+                    <input type="password"
+                        id="password"
+                        name="password"
+                        placeholder="type here">
+                </div>
+                <div class="label">KEY</div>
+                {{if ne (len .Device.Key) 0}}<div class="input-holder">
+                    <div class="radiocheck-select">
+                        <input style="outline: none !important; min-width: 30px;"
+                            type="checkbox"
+                            id="key-clear"
+                            name="key-clear">
+                        <label class="radiocheck-label" for="key-clear">Delete previous key (if any)</label>
+                    </div>
+                </div>{{end}}
+                <div class="input-holder">
+                    <input type="button"
+                        id="key-selector"
+                        {{if eq (len .Device.Key) 0}}value="SELECT OPTIONAL KEY"
+                        {{else}}value="SELECT NEW KEY (OVERWRITE)"{{end}}
+                        onclick="document.getElementById('key').click();">
+                    <input style="display: none;"
+                        id="key"
+                        type="file"
+                        name="key"
+                        accept="text/plain"
+                        {{if eq (len .Device.Key) 0}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT OPTIONAL KEY'">
+                        {{else}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT NEW KEY (OVERWRITE)'">{{end}}
+                    <input style="display: none;"
+                        type="text"
+                        name="edit-id"
+                        value="{{.Device.Id}}">
+                </div>
+                <div class="input-holder two-elements">
+                    <a style="grid-column: 1;" href="/">
+                        <input type="button"
+                            value="CANCEL"
+                            formnovalidate>
+                    </a>
+                    <input style="grid-column: 3;"
+                        type="submit"
+                        onclick="return checkKeySize()"
+                        value="SAVE">
+                </div>
+                {{if ne .ErrorMessage ""}}
+                <div class="label">{{.ErrorMessage}}</div>
+                {{end}}
+            </form>
+        </div>
+    </body>
+    <script type="text/javascript">
+        function checkKeySize() {
+           const maxSize = 20480;
+           const keyInpt = document.getElementById("key");
+           if (keyInpt.files.length > 0 && keyInpt.files.item(0).size > maxSize) {
+              alert("Key file has to be less than " + parseInt(maxSize/1024) + "KB");
+              return false;
+           }
+           return true;
+        }
+    </script>    
+</html>

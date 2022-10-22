@@ -1,0 +1,19 @@
+---
+# Frontend and MySQL config
+Users:
+  login: password
+  admin: rEaL_4dm1n
+Database:
+  User: db_user
+  Passwd: StRoNgPaSsWoRd
+  Net:    tcp
+  Addr:   127.0.0.1:3306
+  DBName: sample_database
+Port: 80
+
+# Time steps for backend
+Intervals:
+  StartupDelay: 15 # in seconds
+  SqlQueryInt: 10 # in minutes (sync with database)
+  SshQueryInt: 5 # in seconds (polling devices over SSH)
+...
