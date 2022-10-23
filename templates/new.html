@@ -97,7 +97,6 @@
                         id="key"
                         type="file"
                         name="key"
-                        accept="text/plain"
                         {{if eq (len .Device.Key) 0}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT OPTIONAL KEY'">
                         {{else}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT NEW KEY (OVERWRITE)'">{{end}}
                     <input style="display: none;"

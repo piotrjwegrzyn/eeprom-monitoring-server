@@ -26,6 +26,10 @@ func (d *Device) GetStatusConnected() string {
 		return fmt.Sprintf("STATUS UNDEFINED (%s)", d.Connected)
 	} else if d.Status == -1 {
 		return "NO ROUTE TO HOST"
+	} else if d.Status == 2 {
+		return fmt.Sprintf("CREDENTIALS MISCONFIGURED (%s)", d.Connected)
+	} else if d.Status == 3 {
+		return "CREDENTIALS FAILED"
 	} else {
 		return fmt.Sprintf("STATUS OK (%s)", d.Connected)
 	}

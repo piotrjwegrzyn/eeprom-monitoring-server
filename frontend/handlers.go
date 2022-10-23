@@ -155,8 +155,8 @@ func GetKey(r *http.Request) (key []byte, msg error) {
 			return
 		}
 	} else {
-		if keyFileHeader.Size > 20480 || keyFileHeader.Size == 0 || keyFileHeader.Header["Content-Type"][0] != "text/plain" {
-			msg = fmt.Errorf("Wrong key file, try again")
+		if keyFileHeader.Size > 20480 || keyFileHeader.Size == 0 {
+			msg = fmt.Errorf("Wrong key size, try again")
 			return
 		}
 		buf := bytes.NewBuffer(nil)
@@ -314,10 +314,10 @@ func EditHtml(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var deviceIpType int
-	if len(net.ParseIP(device.Ip)) != 4 {
-		deviceIpType = 6
-	} else {
+	if net.ParseIP(device.Ip).To4() != nil {
 		deviceIpType = 4
+	} else {
+		deviceIpType = 6
 	}
 
 	if r.Method == http.MethodPost {
