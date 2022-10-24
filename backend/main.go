@@ -10,7 +10,7 @@ import (
 	common "pi-wegrzyn/common"
 )
 
-const version string = "0.1-prealpha"
+const version string = "0.4-alpha"
 
 func main() {
 

@@ -27,7 +27,9 @@ func StartLoop(serverConfig *common.Config) error {
 
 	time.Sleep(10 * time.Second)
 
-	SshSessions[&devices[0]] <- 1
+	for device := range devices {
+		SshSessions[&devices[device]] <- 1
+	}
 
 	return nil
 }

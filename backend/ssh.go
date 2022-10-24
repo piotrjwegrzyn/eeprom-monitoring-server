@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	common "pi-wegrzyn/common"
@@ -9,14 +11,22 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func MonitorData(device *common.Device, signal chan int, timeSleep int) error {
+const SHOW_EEPROM_CMD string = "show-eeprom %s"
+const SHOW_FIBER_INTERFACES string = "/usr/bin/show-fiber-interfaces"
+
+func ProcessData(device *common.Device, interfaceName string, eeprom []byte) {
+	// TODO
+	fmt.Printf("Device %d with interface %s has EEPROM: %X\n", device.Id, interfaceName, eeprom[0])
+}
+
+func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
 	sshConfig := &ssh.ClientConfig{
 		User:            device.Login,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	if signer, err := ssh.ParsePrivateKey(device.Key); err != nil || device.Key == nil || device.Status == 2 {
-		if err != nil {
+		if err != nil && device.Key != nil {
 			log.Printf("Unable to parse private key for device %d (%v)", device.Id, err)
 			device.Status = 2
 		}
@@ -28,14 +38,35 @@ func MonitorData(device *common.Device, signal chan int, timeSleep int) error {
 
 	client, err := ssh.Dial("tcp", device.Ip+":22", sshConfig)
 	if err != nil {
-		log.Printf("Error while dialing %s (%s)\n", device.Ip, err)
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func MonitorData(device *common.Device, signal chan int, timeSleep int) error {
+
+	client, err := CreateSshClient(device)
+	if err != nil {
+		log.Printf("SSH connection error to %s (%s)\n", device.Ip, err)
+		return err
 	}
 
 	session, err := client.NewSession()
 	if err != nil {
 		client.Close()
-		log.Printf("Error with establishing connection with %s (%s)\n", device.Ip, err)
+		log.Printf("Error with creating SSH session to %s (%s)\n", device.Ip, err)
+		return err
 	}
+
+	byteOutput, err := session.CombinedOutput(SHOW_FIBER_INTERFACES)
+	if err != nil {
+		log.Printf("Error with getting list of interfaces for device %s (%s)", device.Ip, err)
+		return err
+	}
+	defer session.Close()
+
+	interfaces := strings.SplitN(string(byteOutput), "\n", -1)
 
 	for {
 		select {
@@ -44,13 +75,24 @@ func MonitorData(device *common.Device, signal chan int, timeSleep int) error {
 			defer client.Close()
 			return nil
 		default:
+			for i := 0; i < len(interfaces)-1; i++ {
+				session, err = client.NewSession()
+				if err != nil {
+					session.Close()
+					client.Close()
+					log.Printf("Error with creating SSH session to %s (%s)\n", device.Ip, err)
+					continue
+				}
+				defer session.Close()
 
-			out, err := session.CombinedOutput("ls -l /tmp/ | head -1")
-			if err != nil {
-				log.Printf("Error with getting output from %s (%s)\n", device.Ip, err)
+				byteOutput, err := session.CombinedOutput(fmt.Sprintf(SHOW_EEPROM_CMD, interfaces[i]))
+				if err != nil {
+					log.Printf("Error with getting EEPROM data of interface %s for device %s (%s)", interfaces[i], device.Ip, err)
+					return err
+				}
+
+				ProcessData(device, interfaces[i], byteOutput)
 			}
-
-			log.Println(string(out))
 
 			time.Sleep(time.Duration(timeSleep) * time.Second)
 		}
