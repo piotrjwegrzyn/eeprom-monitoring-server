@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	common "pi-wegrzyn/common"
 )
 
-const version string = "0.5-prebeta"
+const version string = "0.5.1-prebeta"
 
 func main() {
 
@@ -33,9 +34,8 @@ func main() {
 	config := common.Config{}
 	common.GetConfig(*configFilename, &config)
 
-	log.Printf("Delay set for %d seconds\n", config.Intervals.StartupDelay)
-
-	//time.Sleep(time.Duration(config.Intervals.StartupDelay) * time.Second)
+	log.Printf("Startup delay set for %d seconds\n", config.Intervals.StartupDelay)
+	time.Sleep(time.Duration(config.Intervals.StartupDelay) * time.Second)
 
 	if err := StartLoop(&config); err != nil {
 		log.Fatalf("Server failed with: %s\n", err)

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	common "pi-wegrzyn/common"
-
 	"golang.org/x/crypto/ssh"
+
+	common "pi-wegrzyn/common"
 )
 
 const SHOW_EEPROM_CMD string = "show-eeprom %s"

@@ -12,8 +12,8 @@ Database:
 Port: 80
 
 # Time steps for backend
-Intervals:
-  StartupDelay: 15 # in seconds
-  SqlQueryInt: 10 # in minutes (sync with database)
-  SshQueryInt: 5 # in seconds (polling devices over SSH)
+Intervals: # in seconds
+  StartupDelay: 15
+  SqlQueryInt: 50 # sync with database
+  SshQueryInt: 5 # polling devices over SSH
 ...
