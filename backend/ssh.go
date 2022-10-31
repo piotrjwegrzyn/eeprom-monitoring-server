@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"strings"
@@ -13,10 +14,38 @@ import (
 
 const SHOW_EEPROM_CMD string = "show-eeprom %s"
 const SHOW_FIBER_INTERFACES string = "show-fiber-interfaces"
+const EEPROM_DECODER int = 0
+
+func UnifyEeprom(device *common.Device, input []byte) []byte {
+	if EEPROM_DECODER == 0 {
+		temp := []byte{}
+		for i := 0; i < len(input); i += 33 {
+			temp = append(temp, input[i:i+32]...)
+		}
+		output, err := hex.DecodeString(string(temp))
+		if err != nil {
+			log.Printf("Error while unifying EEPROM on device %d\n", device.Id)
+			return input
+		}
+
+		return output
+	} else {
+		log.Println("Unknown EEPROM format, handling as unformatted")
+		return input
+	}
+}
 
 func ProcessData(device *common.Device, interfaceName string, eeprom []byte) {
-	// TODO
-	fmt.Printf("Device %d with interface %s has EEPROM: %X\n", device.Id, interfaceName, eeprom[0])
+	eeprom = UnifyEeprom(device, eeprom)
+	fmt.Printf("Device %d on interface %s has EEPROM length: %d bytes\n", device.Id, interfaceName, len(eeprom))
+
+	// temperature := 33.1
+	// voltage := 3.47
+	// txPwr := -9.89
+	// rxPwr := -11.45
+	// osnr := 29.7
+
+	// fmt.Printf("Device %d/interface %s: T:%.2f, Vcc:%.2f, TxPwr:%.2f, RxPwr:%.2f, OSNR:%.2f\n", device.Id, interfaceName, temperature, voltage, txPwr, rxPwr, osnr)
 }
 
 func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
