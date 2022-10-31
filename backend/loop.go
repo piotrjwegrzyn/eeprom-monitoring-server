@@ -5,7 +5,11 @@ import (
 	"time"
 )
 
-var SshSessions map[*common.Device]chan int
+type DeviceSignalsHolder struct {
+	DevicePointer *common.Device
+	SignalIn      chan bool
+	SignalOut     chan bool
+}
 
 func StartLoop(serverConfig *common.Config) error {
 
@@ -13,22 +17,37 @@ func StartLoop(serverConfig *common.Config) error {
 	if err != nil {
 		return err
 	}
+	defer database.Close()
 
 	devices, err := common.GetDevices(database)
 	if err != nil {
 		return err
 	}
-	SshSessions = make(map[*common.Device]chan int)
+
+	SshSessions := []DeviceSignalsHolder{}
 
 	for device := range devices {
-		SshSessions[&devices[device]] = make(chan int)
-		go MonitorData(&devices[device], SshSessions[&devices[device]], serverConfig.Intervals.SshQueryInt)
+		signals := DeviceSignalsHolder{&devices[device], make(chan bool), make(chan bool, 1)}
+		SshSessions = append(SshSessions, signals)
+		go MonitorData(&devices[device], signals.SignalIn, signals.SignalOut, serverConfig.Intervals.SshQueryInt)
 	}
 
 	time.Sleep(10 * time.Second)
 
 	for device := range devices {
-		SshSessions[&devices[device]] <- 1
+		select {
+		case errorQuit := <-SshSessions[device].SignalOut:
+			if errorQuit {
+				devices[device].Status = 1
+			}
+		default:
+			SshSessions[device].SignalIn <- true
+			if devices[device].Status != 2 {
+				devices[device].Status = 10
+			}
+			devices[device].Connected = time.Now().Format("2006-01-02 15:04:05")
+		}
+		common.UpdateDevice(database, devices[device])
 	}
 
 	return nil

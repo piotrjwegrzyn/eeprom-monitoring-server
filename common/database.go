@@ -23,15 +23,13 @@ func (d *Device) GetStatusConnected() string {
 	if d.Connected == "Never" && d.Status == 0 {
 		return "STATUS UNDEFINED (NEVER CONNECTED)"
 	} else if d.Status == 0 {
-		return fmt.Sprintf("STATUS UNDEFINED (%s)", d.Connected)
-	} else if d.Status == -1 {
-		return "NO ROUTE TO HOST"
+		return fmt.Sprintf("STATUS UNDEFINED (last connection: %s)", d.Connected)
+	} else if d.Status == 1 {
+		return fmt.Sprintf("SSH SESSION ERROR (last connection: %s)", d.Connected)
 	} else if d.Status == 2 {
-		return fmt.Sprintf("CREDENTIALS MISCONFIGURED (%s)", d.Connected)
-	} else if d.Status == 3 {
-		return "CREDENTIALS FAILED"
+		return fmt.Sprintf("CREDENTIALS MISCONFIGURED (last connection: %s)", d.Connected)
 	} else {
-		return fmt.Sprintf("STATUS OK (%s)", d.Connected)
+		return fmt.Sprintf("STATUS OK (last connection: %s)", d.Connected)
 	}
 }
 
@@ -47,11 +45,11 @@ func InsertDevice(database *sql.DB, device Device) error {
 }
 
 func UpdateDevice(database *sql.DB, device Device) error {
-	update, err := database.Prepare("UPDATE devices SET `hostname`=?, `ip`=?, `login`=?, `password`=?, `key`=? WHERE `id`=?")
+	update, err := database.Prepare("UPDATE devices SET `hostname`=?, `ip`=?, `login`=?, `password`=?, `key`=?, `status`=?, `connected`=? WHERE `id`=?")
 	if err != nil {
 		return err
 	}
-	result, err := update.Exec(device.Hostname, device.Ip, device.Login, device.Password, device.Key, device.Id)
+	result, err := update.Exec(device.Hostname, device.Ip, device.Login, device.Password, device.Key, device.Status, device.Connected, device.Id)
 	if err != nil {
 		return err
 	}
