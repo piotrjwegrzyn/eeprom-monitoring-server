@@ -37,15 +37,14 @@ func UnifyEeprom(device *common.Device, input []byte) []byte {
 
 func ProcessData(device *common.Device, interfaceName string, eeprom []byte) {
 	eeprom = UnifyEeprom(device, eeprom)
-	fmt.Printf("Device %d on interface %s has EEPROM length: %d bytes\n", device.Id, interfaceName, len(eeprom))
 
-	// temperature := 33.1
-	// voltage := 3.47
-	// txPwr := -9.89
-	// rxPwr := -11.45
-	// osnr := 29.7
+	temperature := GetTemperature(eeprom)
+	voltage := GetVoltage(eeprom)
+	txPwr := GetTxPower(eeprom)
+	rxPwr := GetRxPower(eeprom)
+	osnr := GetOsnr(eeprom)
 
-	// fmt.Printf("Device %d/interface %s: T:%.2f, Vcc:%.2f, TxPwr:%.2f, RxPwr:%.2f, OSNR:%.2f\n", device.Id, interfaceName, temperature, voltage, txPwr, rxPwr, osnr)
+	fmt.Printf("Device %d/interface %s: T:%.3f, Vcc:%.3f, TxPwr:%.3f, RxPwr:%.3f, OSNR:%.3f\n", device.Id, interfaceName, temperature, voltage, txPwr, rxPwr, osnr)
 }
 
 func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
