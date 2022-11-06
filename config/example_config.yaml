@@ -1,19 +1,27 @@
 ---
-# Frontend and MySQL config
+# Web credentials 
 Users:
   login: password
   admin: rEaL_4dm1n
+# MySQL config
 Database:
   User: db_user
   Passwd: StRoNgPaSsWoRd
   Net:    tcp
   Addr:   127.0.0.1:3306
   DBName: sample_database
+# Port for devices' config page
 Port: 80
-
-# Time steps for backend
+# Time steps for loop
 Intervals: # in seconds
   StartupDelay: 15
-  SqlQueryInt: 50 # sync with database
+  SqlQueryInt: 50 # syncing with database
   SshQueryInt: 5 # polling devices over SSH
+# Influx config
+Influx:
+  Bucket: sample-bucket-for-data
+  Org: eeprom-monitoring-server
+  Token: v3rY-d1ff1cUlT-t0k3n
+  Url: http://localhost:8086
+  Retention: 24h
 ...

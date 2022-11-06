@@ -35,16 +35,15 @@ func UnifyEeprom(device *common.Device, input []byte) []byte {
 	}
 }
 
-func ProcessData(device *common.Device, interfaceName string, eeprom []byte) {
+func ProcessData(device *common.Device, eeprom []byte) common.InterfaceData {
 	eeprom = UnifyEeprom(device, eeprom)
-
-	temperature := GetTemperature(eeprom)
-	voltage := GetVoltage(eeprom)
-	txPwr := GetTxPower(eeprom)
-	rxPwr := GetRxPower(eeprom)
-	osnr := GetOsnr(eeprom)
-
-	fmt.Printf("Device %d/interface %s: T:%.3f, Vcc:%.3f, TxPwr:%.3f, RxPwr:%.3f, OSNR:%.3f\n", device.Id, interfaceName, temperature, voltage, txPwr, rxPwr, osnr)
+	return common.InterfaceData{
+		GetTemperature(eeprom),
+		GetVoltage(eeprom),
+		GetTxPower(eeprom),
+		GetRxPower(eeprom),
+		GetOsnr(eeprom),
+	}
 }
 
 func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
@@ -72,7 +71,7 @@ func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
 	return client, nil
 }
 
-func MonitorData(device *common.Device, inputSig <-chan bool, outputSig chan<- bool, timeSleep int) {
+func MonitorData(device *common.Device, influxConfig *common.InfluxConfig, inputSig <-chan bool, outputSig chan<- bool, timeSleep int) {
 CLIENT_CREATION:
 	client, err := CreateSshClient(device)
 	if err != nil {
@@ -125,7 +124,8 @@ CLIENT_CREATION:
 					continue
 				}
 
-				ProcessData(device, interfaces[i], byteOutput)
+				interfaceData := ProcessData(device, byteOutput)
+				common.InsertToInflux(influxConfig, device.Hostname, interfaces[i], &interfaceData)
 			}
 
 			time.Sleep(time.Duration(timeSleep) * time.Second)

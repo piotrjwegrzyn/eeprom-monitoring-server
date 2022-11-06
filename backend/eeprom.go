@@ -17,7 +17,6 @@ func MicroWatt01ToDbm(mw01 uint16) float64 {
 }
 
 func GetTemperature(eeprom []byte) float64 {
-	// fmt.Printf("T:%d\n", (int16(eeprom[PAGE_LOW_TEMP])<<8)|int16(eeprom[PAGE_LOW_TEMP+1]))
 	tempMonValue := int16(eeprom[PAGE_LOW_TEMP])<<8 | int16(eeprom[PAGE_LOW_TEMP+1])
 	return float64(tempMonValue) * 10 / 256
 }

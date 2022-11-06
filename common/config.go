@@ -26,11 +26,19 @@ type Intervals struct {
 	SshQueryInt  int `yaml:"SshQueryInt"`
 }
 
+type InfluxConfig struct {
+	Bucket string `yaml:"Bucket"`
+	Org    string `yaml:"Org"`
+	Token  string `yaml:"Token"`
+	Url    string `yaml:"Url"`
+}
+
 type Config struct {
 	Users     map[string]string `yaml:"Users"`
 	Database  DbConfig          `yaml:"Database"`
 	Port      int               `yaml:"Port"`
 	Intervals Intervals         `yaml:"Intervals"`
+	Influx    InfluxConfig      `yaml:"Influx"`
 }
 
 func GetConfig(filename string, configYaml *Config) {

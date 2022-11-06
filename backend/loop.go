@@ -31,7 +31,7 @@ func StartLoop(serverConfig *common.Config) error {
 		for device := range devices {
 			signals := DeviceSignalsHolder{&devices[device], make(chan bool), make(chan bool, 1)}
 			SshSessions = append(SshSessions, signals)
-			go MonitorData(&devices[device], signals.SignalIn, signals.SignalOut, serverConfig.Intervals.SshQueryInt)
+			go MonitorData(&devices[device], &serverConfig.Influx, signals.SignalIn, signals.SignalOut, serverConfig.Intervals.SshQueryInt)
 		}
 
 		log.Printf("SQL interval sleep for %d seconds\n", serverConfig.Intervals.SqlQueryInt)

@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 
 type Device struct {
@@ -31,6 +34,14 @@ func (d *Device) GetStatusConnected() string {
 	} else {
 		return fmt.Sprintf("STATUS OK (last connection: %s)", d.Connected)
 	}
+}
+
+type InterfaceData struct {
+	Temperature float64
+	Voltage     float64
+	TxPower     float64
+	RxPower     float64
+	Osnr        float64
 }
 
 func InsertDevice(database *sql.DB, device Device) error {
@@ -134,4 +145,26 @@ func ConnectToDatabase(config *DbConfig) (database *sql.DB, err error) {
 
 	log.Println("Connected to database")
 	return
+}
+
+func InsertToInflux(config *InfluxConfig, hostname string, iface string, data *InterfaceData) {
+	client := influxdb2.NewClient(config.Url, config.Token)
+	writeAPI := client.WriteAPI(config.Org, config.Bucket)
+
+	p := influxdb2.NewPoint(
+		hostname,
+		map[string]string{
+			"iface": iface,
+		},
+		map[string]interface{}{
+			"temp":   data.Temperature,
+			"vcc":    data.Voltage,
+			"tx_pwr": data.TxPower,
+			"rx_pwr": data.RxPower,
+			"osnr":   data.Osnr,
+		},
+		time.Now())
+
+	writeAPI.WritePoint(p)
+	defer client.Close()
 }
