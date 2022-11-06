@@ -11,7 +11,7 @@ import (
 	common "pi-wegrzyn/common"
 )
 
-const version string = "0.7-beta"
+const version string = "1.1"
 
 func main() {
 

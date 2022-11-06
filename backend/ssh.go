@@ -38,11 +38,11 @@ func UnifyEeprom(device *common.Device, input []byte) []byte {
 func ProcessData(device *common.Device, eeprom []byte) common.InterfaceData {
 	eeprom = UnifyEeprom(device, eeprom)
 	return common.InterfaceData{
-		GetTemperature(eeprom),
-		GetVoltage(eeprom),
-		GetTxPower(eeprom),
-		GetRxPower(eeprom),
-		GetOsnr(eeprom),
+		Temperature: GetTemperature(eeprom),
+		Voltage:     GetVoltage(eeprom),
+		TxPower:     GetTxPower(eeprom),
+		RxPower:     GetRxPower(eeprom),
+		Osnr:        GetOsnr(eeprom),
 	}
 }
 
@@ -50,6 +50,7 @@ func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
 	sshConfig := &ssh.ClientConfig{
 		User:            device.Login,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         5 * time.Second,
 	}
 
 	if signer, err := ssh.ParsePrivateKey(device.Key); err != nil || device.Key == nil || device.Status == 2 {
@@ -72,47 +73,57 @@ func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
 }
 
 func MonitorData(device *common.Device, influxConfig *common.InfluxConfig, inputSig <-chan bool, outputSig chan<- bool, timeSleep int) {
+	log.Printf("Started goroutine on device with ID: %d\n", device.Id)
 CLIENT_CREATION:
-	client, err := CreateSshClient(device)
-	if err != nil {
-		log.Printf("SSH error on %s (%s)\n", device.Ip, err)
-		outputSig <- true
-		return
-	}
 
-	session, err := client.NewSession()
-	if err != nil {
+	interfaces := []string{}
+
+	log.Printf("Creating SSH client for device with ID: %d\n", device.Id)
+	client, errStart := CreateSshClient(device)
+	if errStart != nil {
+		log.Printf("SSH client error on device with ID: %d (%s)\n", device.Id, errStart)
+		outputSig <- true
+	} else {
 		defer client.Close()
-		log.Printf("SSH session error on %s (%s)\n", device.Ip, err)
-		outputSig <- true
-		return
+
+		log.Printf("Creating SSH session for interfaces on device with ID: %d\n", device.Id)
+		session, errStart := client.NewSession()
+		if errStart != nil {
+			log.Printf("SSH session error on device with ID: %d (%s)\n", device.Id, errStart)
+			outputSig <- true
+		} else {
+			defer session.Close()
+
+			log.Printf("Getting interfaces on device with ID: %d\n", device.Id)
+			byteOutput, errStart := session.CombinedOutput(SHOW_FIBER_INTERFACES)
+			if errStart != nil {
+				log.Printf("Error with getting interfaces on device with ID: %d (%s)", device.Id, errStart)
+				outputSig <- true
+			} else {
+				interfaces = strings.SplitN(string(byteOutput), "\n", -1)
+				log.Printf("Detected %d interfaces on device with ID: %d\n", len(interfaces), device.Id)
+			}
+		}
 	}
 
-	byteOutput, err := session.CombinedOutput(SHOW_FIBER_INTERFACES)
-	if err != nil {
-		log.Printf("Error with getting list of interfaces for device %s (%s)", device.Ip, err)
-		outputSig <- true
-		return
-	}
-	session.Close()
-
-	interfaces := strings.SplitN(string(byteOutput), "\n", -1)
-
+	sessionErrors := 0
 	for {
 		select {
 		case <-inputSig:
-			defer client.Close()
+			log.Printf("Received stop signal on device with ID %d\n", device.Id)
 			return
 		default:
-			sessionError := false
 			for i := 0; i < len(interfaces)-1; i++ {
-				session, err = client.NewSession()
+				session, err := client.NewSession()
 				if err != nil {
-					log.Printf("SSH session error on %s (%s)\n", device.Ip, err)
-					if !sessionError {
+					log.Printf("SSH session error on device with ID %d (%s)\n", device.Id, err)
+					if sessionErrors > 2 {
+						log.Printf("Reconnecting to device with ID %d (too many session errors)\n", device.Id)
+						client.Close()
 						goto CLIENT_CREATION
 					} else {
-						sessionError = false
+						log.Printf("Skiping interface %s on device with ID %d (session error)\n", interfaces[i], device.Id)
+						sessionErrors += 1
 					}
 					continue
 				}
@@ -120,7 +131,7 @@ CLIENT_CREATION:
 
 				byteOutput, err := session.CombinedOutput(fmt.Sprintf(SHOW_EEPROM_CMD, interfaces[i]))
 				if err != nil {
-					log.Printf("Error with EEPROM from interface %s for device %d (%s)\n", interfaces[i], device.Id, err)
+					log.Printf("Error with interface %s on device with ID: %d (%s)\n", interfaces[i], device.Id, err)
 					continue
 				}
 
