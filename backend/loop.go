@@ -35,29 +35,33 @@ func StartLoop(serverConfig *common.Config) error {
 			go MonitorData(&devices[device], &serverConfig.Influx, signals.SignalIn, signals.SignalOut, serverConfig.Intervals.SshQueryInt)
 		}
 
-		log.Printf("SQL interval sleep for %d seconds\n", serverConfig.Intervals.SqlQueryInt)
+		log.Printf("SQL check interval set to %d seconds\n", serverConfig.Intervals.SqlQueryInt)
 
-		for i := 0; i < serverConfig.Intervals.SqlQueryInt; i++ {
-			time.Sleep(time.Second)
+		timestamp := time.Now().Add(time.Second * time.Duration(serverConfig.Intervals.SqlQueryInt))
+		for time.Now().Before(timestamp) {
+			continue
 		}
 
 		for device := range devices {
 			select {
-			case errorQuit := <-SshSessions[device].SignalOut:
-				log.Printf("Detected error signal on device with ID: %d\n", devices[device].Id)
-				if errorQuit {
+			case <-SshSessions[device].SignalOut:
+				log.Printf("Detected error signal from device with ID: %d\n", devices[device].Id)
+				if devices[device].Status != 2 {
 					devices[device].Status = 1
 				}
 			default:
 				log.Printf("Sending stop signal to device with ID: %d\n", devices[device].Id)
 				SshSessions[device].SignalIn <- true
-				if devices[device].Status != 2 {
-					devices[device].Status = 10
+				if devices[device].Status != 1 && devices[device].Status != 2 {
+					devices[device].Status = 0
 				}
 				devices[device].Connected = time.Now().Format("2006-01-02 15:04:05")
 			}
 
-			common.UpdateDevice(database, devices[device])
+			err = common.UpdateDeviceStatus(database, devices[device])
+			if err != nil {
+				log.Printf("Error while updating device with ID: %d (%s)\n", devices[device].Id, err)
+			}
 		}
 	}
 }

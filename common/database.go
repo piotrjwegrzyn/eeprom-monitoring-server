@@ -23,16 +23,16 @@ type Device struct {
 }
 
 func (d *Device) GetStatusConnected() string {
-	if d.Connected == "Never" && d.Status == 0 {
+	if d.Status == -1 || d.Connected == "Never" { // TODO("Remove right side of alternative after database update")
 		return "STATUS UNDEFINED (NEVER CONNECTED)"
 	} else if d.Status == 0 {
-		return fmt.Sprintf("STATUS UNDEFINED (last connection: %s)", d.Connected)
+		return fmt.Sprintf("STATUS OK (last connection: %s)", d.Connected)
 	} else if d.Status == 1 {
 		return fmt.Sprintf("SSH SESSION ERROR (last connection: %s)", d.Connected)
 	} else if d.Status == 2 {
 		return fmt.Sprintf("CREDENTIALS MISCONFIGURED (last connection: %s)", d.Connected)
 	} else {
-		return fmt.Sprintf("STATUS OK (last connection: %s)", d.Connected)
+		return fmt.Sprintf("STATUS UNKNOWN (last connection: %s)", d.Connected)
 	}
 }
 
@@ -71,6 +71,21 @@ func UpdateDevice(database *sql.DB, device Device) error {
 		log.Printf("Nothing happen with update device with ID: %d (%d rows affected)\n", device.Id, affected)
 	} else {
 		return fmt.Errorf("%d rows affected during update device with ID: %d", affected, device.Id)
+	}
+
+	return nil
+}
+
+func UpdateDeviceStatus(database *sql.DB, device Device) error {
+	currentDevice, err := GetDevice(database, device.Id)
+	if err != nil {
+		return err
+	}
+	currentDevice.Status, currentDevice.Connected = device.Status, device.Connected
+
+	err = UpdateDevice(database, currentDevice)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -149,13 +164,12 @@ func ConnectToDatabase(config *DbConfig) (database *sql.DB, err error) {
 
 func InsertToInflux(config *InfluxConfig, hostname string, iface string, data *InterfaceData) {
 	client := influxdb2.NewClient(config.Url, config.Token)
+	defer client.Close()
 	writeAPI := client.WriteAPI(config.Org, config.Bucket)
 
 	p := influxdb2.NewPoint(
 		hostname,
-		map[string]string{
-			"iface": iface,
-		},
+		map[string]string{"iface": iface},
 		map[string]interface{}{
 			"temp":   data.Temperature,
 			"vcc":    data.Voltage,
@@ -163,8 +177,8 @@ func InsertToInflux(config *InfluxConfig, hostname string, iface string, data *I
 			"rx_pwr": data.RxPower,
 			"osnr":   data.Osnr,
 		},
-		time.Now())
+		time.Now(),
+	)
 
 	writeAPI.WritePoint(p)
-	defer client.Close()
 }
