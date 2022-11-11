@@ -101,6 +101,7 @@ CLIENT_CREATION:
 			} else {
 				interfaces = strings.SplitN(string(byteOutput), "\n", -1)
 				log.Printf("Detected %d interfaces on device with ID: %d\n", len(interfaces)-1, device.Id)
+				device.Status = 0
 			}
 		}
 	}

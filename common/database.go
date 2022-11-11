@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -171,11 +172,11 @@ func InsertToInflux(config *InfluxConfig, hostname string, iface string, data *I
 		hostname,
 		map[string]string{"iface": iface},
 		map[string]interface{}{
-			"temp":   data.Temperature,
-			"vcc":    data.Voltage,
-			"tx_pwr": data.TxPower,
-			"rx_pwr": data.RxPower,
-			"osnr":   data.Osnr,
+			"temp":   math.Round(data.Temperature*100) / 100,
+			"vcc":    math.Round(data.Voltage*100) / 100,
+			"tx_pwr": math.Round(data.TxPower*100) / 100,
+			"rx_pwr": math.Round(data.RxPower*100) / 100,
+			"osnr":   math.Round(data.Osnr*100) / 100,
 		},
 		time.Now(),
 	)
