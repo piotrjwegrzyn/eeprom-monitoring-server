@@ -21,6 +21,8 @@ COPY ./static/ /etc/eeprom-monitoring-server/static/
 COPY ./templates/ /etc/eeprom-monitoring-server/templates/
 COPY ./config/config.yaml /etc/eeprom-monitoring-server/config.yaml
 COPY ./config/mysql.dump /tmp/database.dump
+COPY ./influx/influxd /usr/bin/influxd
+COPY ./influx/influx /usr/bin/influx
 
 EXPOSE ${PORT}
 EXPOSE 8086

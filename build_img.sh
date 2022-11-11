@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=0.2
+VERSION=0.3
 CONFIG_FILE=config/config.yaml
 
 if ! $(test -f "$CONFIG_FILE");
@@ -46,7 +46,22 @@ sed 's/__config_token/'$TOKEN'/' -i Dockerfile
 sed 's/__config_url/'$URL'/' -i Dockerfile
 sed 's/__config_retention/'$RETENTION'/' -i Dockerfile
 
+wget -O influx.tmp https://portal.influxdata.com/downloads/
+DOWNLOAD_INFLUXD=$(cat influx.tmp | grep "wget https://dl.influxdata.com/influxdb/releases/influxdb2" | grep "linux-amd64" | awk '{printf $2 "\n"}' | head -1)
+DOWNLOAD_INFLUXC=$(cat influx.tmp | grep "wget https://dl.influxdata.com/influxdb/releases/influxdb2" | grep "linux-amd64" | awk '{printf $2 "\n"}' | tail -1)
+rm influx.tmp
+
+mkdir influx_download influx
+wget -O influxd.tar.gz $DOWNLOAD_INFLUXD
+tar -xvf influxd.tar.gz -C ./influx_download
+mv ./influx_download/$(ls influx_download | grep -v "client")/influxd ./influx/influxd
+mv ./influx_download/$(ls influx_download | grep -v "client")/LICENSE ./influx/D_LICENSE
+wget -O influxc.tar.gz $DOWNLOAD_INFLUXC
+tar -xvf influxc.tar.gz -C ./influx_download
+mv ./influx_download/$(ls influx_download | grep "client")/influx ./influx/influx
+mv ./influx_download/$(ls influx_download | grep "client")/LICENSE ./influx/CLI_LICENSE
+
 docker build -t pi-wegrzyn/eeprom-monitoring-server:$VERSION -t pi-wegrzyn/eeprom-monitoring-server:latest .
 
-rm Dockerfile
+rm -rf Dockerfile influxd.tar.gz influxc.tar.gz influx_download/ influx.tmp
 mv .Dockerfile.bck Dockerfile
