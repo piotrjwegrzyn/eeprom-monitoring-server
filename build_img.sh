@@ -1,11 +1,30 @@
 #!/bin/sh
 
-VERSION=0.4
+VERSION=0.5
 CONFIG_FILE=config/config.yaml
 
 if ! $(test -f "$CONFIG_FILE");
 then
-    echo "Config file not found"
+    echo "Adjusted config file not found, using example one"
+    CONFIG_FILE=config/example_config.yaml
+fi
+
+go version > /dev/null
+if [ $? -ne 0 ];
+then
+    echo "Go compiler not found, installing..."
+    wget -O go-ver.tmp https://go.dev/dl/
+    GO_VERSION=$(cat go-ver.tmp | grep -oE "/dl/go.*linux-amd64\.tar\.gz" | head -1)
+    wget -O go-compiler.tar.gz https://go.dev$GO_VERSION
+    sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go-compiler.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    rm go-ver.tmp rm go-compiler.tar.gz
+fi
+
+go version > /dev/null
+if [ $? -ne 0 ];
+then
+    echo "Go compiler installation failed, abort"
     exit 1
 fi
 
