@@ -1,6 +1,7 @@
 FROM ubuntu:latest
 LABEL VERSION=__version
 
+ARG CONFIG=__config_file
 ARG USER=__config_user
 ARG PASSWORD=__config_password
 ARG DB_USER=__config_db_user
@@ -18,7 +19,7 @@ COPY ./frontend/frontend /usr/bin/eeprom-monitoring-server-frontend
 COPY ./backend/backend /usr/bin/eeprom-monitoring-server-backend
 COPY ./static/ /etc/eeprom-monitoring-server/static/
 COPY ./templates/ /etc/eeprom-monitoring-server/templates/
-COPY ./config/config.yaml /etc/eeprom-monitoring-server/config.yaml
+COPY ./${CONFIG} /etc/eeprom-monitoring-server/config.yaml
 COPY ./config/mysql.dump /tmp/database.dump
 COPY ./influx/influxd /usr/bin/influxd
 COPY ./influx/influx /usr/bin/influx

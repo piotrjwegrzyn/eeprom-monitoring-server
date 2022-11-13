@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=0.5
+VERSION=0.6
 CONFIG_FILE=config/config.yaml
 
 if ! $(test -f "$CONFIG_FILE");
@@ -37,6 +37,7 @@ cd ../
 cp Dockerfile .Dockerfile.bck
 sed 's/__version/'$VERSION'/' -i Dockerfile
 
+sed 's/__config_file/'$(echo $CONFIG_FILE | sed 's/\//\\\//')'/' -i Dockerfile
 sed 's/__config_user/'$(cat $CONFIG_FILE | grep -E "Users:" -A 1 | tail -1 | awk '{printf $1}' | sed 's/://')'/' -i Dockerfile
 sed 's/__config_password/'$(cat $CONFIG_FILE | grep -E "Users:" -A 1 | tail -1 | awk '{printf $2}')'/' -i Dockerfile
 sed 's/__config_db_user/'$(cat $CONFIG_FILE | grep -E "User:" | awk '{printf $2}')'/' -i Dockerfile
