@@ -13,7 +13,7 @@ ARG ORG=__config_org
 ARG TOKEN=__config_token
 ARG RETENTION=__config_retention
 
-RUN apt update && apt install -y mysql-server
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
 
 COPY ./frontend/frontend /usr/bin/eeprom-monitoring-server-frontend
 COPY ./backend/backend /usr/bin/eeprom-monitoring-server-backend
