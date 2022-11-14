@@ -17,7 +17,7 @@ then
     GO_VERSION=$(cat go-ver.tmp | grep -oE "/dl/go.*linux-amd64\.tar\.gz" | head -1)
     wget -O go-compiler.tar.gz https://go.dev$GO_VERSION
     sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go-compiler.tar.gz
-    sudo echo "export PATH=$PATH:/usr/local/go/bin" >> /etc/profile
+    export PATH=$PATH:/usr/local/go/bin
     rm go-ver.tmp go-compiler.tar.gz
 fi
 
