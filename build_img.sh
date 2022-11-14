@@ -17,7 +17,7 @@ then
     GO_VERSION=$(cat go-ver.tmp | grep -oE "/dl/go.*linux-amd64\.tar\.gz" | head -1)
     wget -O go-compiler.tar.gz https://go.dev$GO_VERSION
     sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go-compiler.tar.gz
-    export PATH=$PATH:/usr/local/go/bin
+    sudo echo "export PATH=$PATH:/usr/local/go/bin" >> /etc/profile
     rm go-ver.tmp go-compiler.tar.gz
 fi
 
@@ -53,7 +53,7 @@ wget -O influx.tmp https://portal.influxdata.com/downloads/
 DOWNLOAD_INFLUXD=$(cat influx.tmp | grep "wget https://dl.influxdata.com/influxdb/releases/influxdb2" | grep "linux-amd64" | awk '{printf $2 "\n"}' | head -1)
 DOWNLOAD_INFLUXC=$(cat influx.tmp | grep "wget https://dl.influxdata.com/influxdb/releases/influxdb2" | grep "linux-amd64" | awk '{printf $2 "\n"}' | tail -1)
 
-mkdir influx_download influx
+mkdir -p influx_download influx
 
 if ! $(test -f "./influx/influxd");
 then
@@ -73,7 +73,7 @@ then
     mv ./influx_download/$(ls influx_download | grep "client")/LICENSE ./influx/CLI_LICENSE
 fi
 
-docker build --co-cache -t pi-wegrzyn/eeprom-monitoring-server:$VERSION -t pi-wegrzyn/eeprom-monitoring-server:latest .
+docker build --no-cache -t pi-wegrzyn/eeprom-monitoring-server:$VERSION -t pi-wegrzyn/eeprom-monitoring-server:latest .
 
 rm -rf influxd.tar.gz influxc.tar.gz influx_download/ influx.tmp
 mv Dockerfile Dockerfile_v"$VERSION"_$(date +%F_%s)
