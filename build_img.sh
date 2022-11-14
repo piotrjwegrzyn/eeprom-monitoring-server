@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=0.6
+VERSION=0.7
 CONFIG_FILE=config/config.yaml
 
 if ! $(test -f "$CONFIG_FILE");
@@ -18,7 +18,7 @@ then
     wget -O go-compiler.tar.gz https://go.dev$GO_VERSION
     sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go-compiler.tar.gz
     export PATH=$PATH:/usr/local/go/bin
-    rm go-ver.tmp rm go-compiler.tar.gz
+    rm go-ver.tmp go-compiler.tar.gz
 fi
 
 go version > /dev/null
@@ -73,7 +73,7 @@ then
     mv ./influx_download/$(ls influx_download | grep "client")/LICENSE ./influx/CLI_LICENSE
 fi
 
-docker build -t pi-wegrzyn/eeprom-monitoring-server:$VERSION -t pi-wegrzyn/eeprom-monitoring-server:latest .
+docker build --co-cache -t pi-wegrzyn/eeprom-monitoring-server:$VERSION -t pi-wegrzyn/eeprom-monitoring-server:latest .
 
 rm -rf influxd.tar.gz influxc.tar.gz influx_download/ influx.tmp
 mv Dockerfile Dockerfile_v"$VERSION"_$(date +%F_%s)

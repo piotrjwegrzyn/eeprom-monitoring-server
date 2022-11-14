@@ -24,13 +24,13 @@ COPY ./config/mysql.dump /tmp/database.dump
 COPY ./influx/influxd /usr/bin/influxd
 COPY ./influx/influx /usr/bin/influx
 
-RUN /usr/sbin/mysqld & sleep 2 && \
+RUN /usr/sbin/mysqld & sleep 5 && \
     mysql -u root -e "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" && \
     mysql -u root -e "CREATE DATABASE \`${DB_NAME}\`" && \
     mysql -u root -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';" && \
     mysql -u root -e "FLUSH PRIVILEGES;" && \
     mysql ${DB_NAME} < /tmp/database.dump
-RUN /usr/bin/influxd & sleep 2 && \
+RUN /usr/bin/influxd & sleep 5 && \
     /usr/bin/influx setup -u ${USER} -p ${PASSWORD} -t ${TOKEN} -o ${ORG} -b ${BUCKET} -r ${RETENTION} -f -n default --host http://:8086
 
 ENTRYPOINT /usr/sbin/mysqld & sleep 2 && /usr/bin/influxd & sleep 2 && \
