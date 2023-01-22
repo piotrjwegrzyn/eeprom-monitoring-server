@@ -1,0 +1,21 @@
+{
+    "appliance_id": "d43a41c9-377c-4df7-96c6-64ba16947d13",
+    "name": "EMS",
+    "category": "guest",
+    "description": "EMS - EEPROM Monitoring Server\n-------------------------------------------------\nThe server for extracting EEPROM data from SFP modules such as temperature, voltage, Tx/Rx powers an OSNR.",
+    "vendor_name": "Piotr W\u0119grzyn",
+    "vendor_url": "https://github.com/piotrjwegrzyn",
+    "product_name": "EEPROM Monitoring Server",
+    "product_url": "https://github.com/piotrjwegrzyn/eeprom-monitoring-server",
+    "registry_version": 3,
+    "status": "stable",
+    "maintainer": "Piotr W\u0119grzyn",
+    "maintainer_email": "piotr@wegrzyn.dev",
+    "usage": "Connect to DHCP server and setup DHCP on `eth0` in adapter's config.\n\nConfiguration:\thttp://<EMS_IP_ADDRESS>:80/\nInfluxDB:\t\thttp://<EMS_IP_ADDRESS>:8086/\n\nCredentials:\tlogin / password",
+    "symbol": ":/symbols/affinity/square/blue/statistics.svg",
+    "docker": {
+        "adapters": 1,
+        "image": "piotrjwegrzyn/eeprom-monitoring-server:latest",
+        "console_type": "none"
+    }
+}
