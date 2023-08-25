@@ -18,13 +18,13 @@ The server for extracting EEPROM data from SFP modules such as temperature, volt
 
 The server provides a web-based graphical interface that allows administrator to declare which network devices should be queried. Configuration consists of providing host-name, IP address, login and password or key as on picture below.
 
-![frontend_unit.png](gitresources/frontend_unit.png)
+![frontend_unit.png](.github/frontend_unit.png)
 
 ### Prometheus dashboard
 
 The configured Server periodically gain SFPs' EEPROM data from network hosts. It is stored in [Influx database](https://www.influxdata.com/). The feature of the Server is to visualize the collected data, particularly over time and in the past.
 
-![backend_unit.png](gitresources/backend_unit.png)
+![backend_unit.png](.github/backend_unit.png)
 
 ## Pulling from Docker Hub
 The container is already compiled and available on [Docker Hub](https://hub.docker.com/r/piotrjwegrzyn/eeprom-monitoring-server). To pull type in terminal:
@@ -56,9 +56,9 @@ By default, CONFIG_PORT is 80 and there is configuration page available. Prometh
 
 ## Usage in GNS3
 
-This container can be used in GNS3 simulation. To import it download [template file](gitresources/ems-template.gns3a) and import to GNS3.
+This container can be used in GNS3 simulation. To import it download [template file](.github/ems-template.gns3a) and import to GNS3.
 
-![gns3.png](gitresources/gns3.png)
+![gns3.png](.github/gns3.png)
 
 
 ## Config file

@@ -3,3 +3,4 @@ backend/backend
 config/config.yaml
 Dockerfile_v*
 influx/
+presenter/eeproms/*
