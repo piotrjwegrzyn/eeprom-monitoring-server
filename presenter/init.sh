@@ -14,3 +14,11 @@ done
 ln -s $FIN_DIR/present.sh /usr/bin/show-eeprom
 echo "ls --color=never $FIN_DIR/interfaces/ | grep ." > /usr/bin/show-fiber-interfaces
 chmod +x /usr/bin/show-fiber-interfaces
+
+# SSH init
+echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config
+
+mkdir /root/.ssh/
+echo "FIN_DIR=$FIN_DIR" >> /root/.ssh/environment
