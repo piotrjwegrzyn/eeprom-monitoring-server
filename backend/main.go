@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"pi-wegrzyn/backend/cmds"
 	"pi-wegrzyn/utils"
 )
 
@@ -15,7 +16,7 @@ const version string = "1.2"
 
 func main() {
 
-	var configFilename = flag.String("config", "config/config.yaml", "Path to config file (YAML file)")
+	var configFilename = flag.String("config", "config.yaml", "Path to config file (YAML file)")
 	var info = flag.Bool("version", false, "Print version")
 
 	flag.Parse()
@@ -37,7 +38,7 @@ func main() {
 	log.Printf("Startup delay set for %d seconds\n", config.Intervals.StartupDelay)
 	time.Sleep(time.Duration(config.Intervals.StartupDelay) * time.Second)
 
-	if err := StartLoop(&config); err != nil {
+	if err := cmds.StartLoop(&config); err != nil {
 		log.Fatalf("Server failed with: %s\n", err)
 	}
 }

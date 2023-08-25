@@ -1,4 +1,4 @@
-package opers
+package cmds
 
 import (
 	"crypto/md5"

@@ -7,13 +7,14 @@ import (
 	"log"
 	"os"
 
+	"pi-wegrzyn/frontend/cmds"
 	"pi-wegrzyn/utils"
 )
 
 const version string = "2.0"
 
 func main() {
-	var configFilename = flag.String("config", "config/config.yaml", "Path to config file (YAML file)")
+	var configFilename = flag.String("config", "config.yaml", "Path to config file (YAML file)")
 	var templatesDir = flag.String("templates", "templates/", "Path to templates directory (HTML files)")
 	var staticDir = flag.String("static", "static/", "Path to static files (CSS and favicon)")
 	var info = flag.Bool("version", false, "Print version")
@@ -42,7 +43,7 @@ func main() {
 	config := utils.Config{}
 	utils.GetConfig(*configFilename, &config)
 
-	if err := StartServer(&config, templatesDir, staticDir); err != nil {
+	if err := cmds.StartServer(&config, templatesDir, staticDir); err != nil {
 		log.Fatalf("Server failed with: %s\n", err)
 	}
 }

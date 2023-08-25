@@ -1,6 +1,10 @@
+.vscode
+
+/bin/
+*.out
+
 frontend/frontend
 backend/backend
-config/config.yaml
-Dockerfile_v*
-influx/
+presenter/presenter
+
 presenter/eeproms/*

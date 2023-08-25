@@ -69,3 +69,129 @@ Config path might be provided explicitly.
 ## License
 [GNU GENERAL PUBLIC LICENSE](https://github.com/piotrjwegrzyn/eeprom-monitoring-server/blob/master/LICENSE)
 
+# Backend module
+Extracting EEPROM from network hosts and inserting to InfluxDB
+
+## Compilation
+Open folder in CMD/Terminal and type:
+```
+go build
+```
+Package `common` from main directory is needed to compile sucessfully.
+
+Tested on Go 1.19.
+
+## Usage
+Type in CMD/Terminal:
+```
+./backend -config <config_file.yaml>
+```
+
+## Config file
+Sample config file is provided in main `config/` directory. It contains server's startup configuration like users, MySQL and InfluxDB databases, and time steps.
+
+Config path might be provided explicitly.
+
+## InfluxDB configuration
+To configure InfluxDB you have to download binaries for daemon and cli from [here](https://docs.influxdata.com/influxdb/v2.5/install/?t=Linux#manually-download-and-install-the-influxd-binary) and [here](https://docs.influxdata.com/influxdb/v2.5/install/?t=Linux#download-and-install-the-influx-cli).
+
+Start daemon and configure:
+```
+./influxd &
+./influx setup -u login -p password -t v3rY-d1ff1cUlT-t0k3n -o eeprom-monitoring-server -b sample-bucket-for-data -r 24h -f -n default --host http://:8086
+```
+
+# Frontend module
+Configuration portal for devices
+
+## Compilation
+Open folder in CMD/Terminal and type:
+```
+go build
+```
+Package `common` from main directory is needed to compile sucessfully.
+
+Tested on Go 1.19.
+
+## Usage
+Type in CMD/Terminal:
+```
+./frontend -config <config_file.yaml> -templates <path/to/templates-dir> -static <path/to/static-dir>
+```
+
+## Config and Templates
+Sample files are provided in main directory:
+* `config/` - contains server's startup configuration (users and database connection)
+* `templates/` - contains HTML files
+* `static/` - contains CSS and favicon files
+
+Unlike other files config path might be provided explicitly.
+
+Sample database file is attached in `config/` folder (tested on MariaDB 10.9.2).
+
+# eeprom-generator
+Simple tool for generating some EEPROM pages of optical modules. Compatible with CMIS 5.
+
+## Pages that are (partially) supported:
+* Lower page
+* Page 00h
+* Page 01h
+* Page 02h
+* Page 04h
+* Page 11h
+* Page 12h
+* Page 25h (OSNR only)
+
+## Compilation
+Open folder in CMD/Terminal and type:
+```
+go build
+```
+Tested on Go 1.19.
+
+## Usage
+Type in CMD/Terminal:
+```
+./eeprom-generator -scenario <SCENARIO_CONFIG.yaml> -modules <MODULES_CONFIG.yaml> -location <YOUR_PATH>
+```
+
+## Config creation
+Sample config files are provided.
+
+
+# eeprom-presenter
+Simple container with commands to list optical interfaces and show EEPROM on them.
+
+## How to build on any Linux
+Prepare EEPROM files for interfaces and move them to `eeproms` (remove default `eth0` folder before).
+
+**Note**: folders' names in `eeproms` directory should reflect network interfaces' names (what is not cover here).
+
+Then:
+```
+docker build -t pi-wegrzyn/eeprom-presenter:latest .
+```
+
+## How to run on any Linux
+```
+docker run -ti pi-wegrzyn/eeprom-presenter
+```
+
+## Usage
+```
+# Show optic ports:
+show-fiber-interfaces
+
+# Show EEPROM on interface:
+show-eeprom <IFACE>
+```
+
+## How to run in GNS3's project
+SSH to our GNS3 server and build container as above. Then follow [that guide](https://docs.gns3.com/docs/emulators/docker-support-in-gns3).
+
+**Note**: Default GNS3 interfaces are enumerating as eth0, eth1 and so on.
+
+**Note**: Do not type `exit` in console because it leads to shutdown container.
+
+## License
+All software is under GNU GPL version 3.

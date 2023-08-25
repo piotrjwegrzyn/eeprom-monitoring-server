@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	"encoding/hex"
@@ -12,9 +12,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const SHOW_EEPROM_CMD string = "show-eeprom %s"
-const SHOW_FIBER_INTERFACES_CMD string = "show-fiber-interfaces"
-const EEPROM_DECODER_TYPE int = 0
+const (
+	SHOW_EEPROM_CMD           string = "show-eeprom %s"
+	SHOW_FIBER_INTERFACES_CMD string = "show-fiber-interfaces"
+	EEPROM_DECODER_TYPE       int    = 0
+)
 
 func UnifyEeprom(device *utils.Device, input []byte) []byte {
 	if EEPROM_DECODER_TYPE == 0 {

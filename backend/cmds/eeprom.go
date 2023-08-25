@@ -1,16 +1,18 @@
-package main
+package cmds
 
 import (
 	"math"
 )
 
-const PAGE_LEN int = 128
+const (
+	PAGE_LEN int = 128
 
-const PAGE_LOW_TEMP int = 0*PAGE_LEN + 0x0E
-const PAGE_LOW_VCC int = 0*PAGE_LEN + 0x10
-const PAGE_11H_TX_PWR int = 5*PAGE_LEN + 0x1A
-const PAGE_11H_RX_PWR int = 5*PAGE_LEN + 0x3A
-const PAGE_25H_OSNR int = 7*PAGE_LEN + 0x16
+	PAGE_LOW_TEMP   int = 0*PAGE_LEN + 0x0E
+	PAGE_LOW_VCC    int = 0*PAGE_LEN + 0x10
+	PAGE_11H_TX_PWR int = 5*PAGE_LEN + 0x1A
+	PAGE_11H_RX_PWR int = 5*PAGE_LEN + 0x3A
+	PAGE_25H_OSNR   int = 7*PAGE_LEN + 0x16
+)
 
 func MicroWatt01ToDbm(mw01 uint16) float64 {
 	return 10 * math.Log10(float64(mw01)/10000)

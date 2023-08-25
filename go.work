@@ -1,9 +1,8 @@
 go 1.21.0
 
-use ./backend
-
-use ./frontend
-
-use ./utils
-
-use ./generator
+use (
+	./backend
+	./frontend
+	./generator
+	./utils
+)
