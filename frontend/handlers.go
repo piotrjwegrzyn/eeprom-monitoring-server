@@ -14,7 +14,7 @@ import (
 	"text/template"
 	"time"
 
-	common "pi-wegrzyn/common"
+	"pi-wegrzyn/utils"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +28,7 @@ func GetPattern(version int) string {
 
 type NewEdit struct {
 	Action       string
-	Device       common.Device
+	Device       utils.Device
 	IpVersion    int
 	ErrorMessage string
 }
@@ -44,7 +44,7 @@ func (s Session) isExpired() bool {
 
 var Sessions map[string]Session
 var PageTemplates map[string]*template.Template
-var PageConfig *common.Config
+var PageConfig *utils.Config
 
 const Ipv4Pattern string = `^((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])$`
 const Ipv6Pattern string = `^((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:)))(%.+)?$`
@@ -211,14 +211,14 @@ func IndexHtml(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%s%s (%s / %s)\n", r.Host, r.URL, r.Method, r.Proto)
 
-	database, err := common.ConnectToDatabase(&PageConfig.Database)
+	database, err := utils.ConnectToDatabase(&PageConfig.Database)
 	if err != nil {
 		log.Println("Error while opening database")
 		PageTemplates["index.html"].Execute(w, nil)
 		return
 	}
 
-	devices, err := common.GetDevices(database)
+	devices, err := utils.GetDevices(database)
 	if err != nil {
 		log.Println("Error while operating with database")
 		PageTemplates["index.html"].Execute(w, nil)
@@ -252,24 +252,24 @@ func NewHtml(w http.ResponseWriter, r *http.Request) {
 
 		err = ValidateFormInput(&ipType, &hostname, &ip, &login)
 		if err != nil {
-			PageTemplates["new.html"].Execute(w, NewEdit{"New", common.Device{Hostname: hostname, Ip: ip, Login: login}, ipType, err.Error()})
+			PageTemplates["new.html"].Execute(w, NewEdit{"New", utils.Device{Hostname: hostname, Ip: ip, Login: login}, ipType, err.Error()})
 			return
 		}
 
 		key, err := GetKey(r)
 		if err != nil {
-			PageTemplates["new.html"].Execute(w, NewEdit{"New", common.Device{Hostname: hostname, Ip: ip, Login: login}, ipType, err.Error()})
+			PageTemplates["new.html"].Execute(w, NewEdit{"New", utils.Device{Hostname: hostname, Ip: ip, Login: login}, ipType, err.Error()})
 			return
 		}
 
-		database, err := common.ConnectToDatabase(&PageConfig.Database)
+		database, err := utils.ConnectToDatabase(&PageConfig.Database)
 		if err != nil {
 			log.Println("Error while opening database")
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
-		err = common.InsertDevice(database, common.Device{Hostname: hostname, Ip: ip, Login: login, Password: password, Key: key})
+		err = utils.InsertDevice(database, utils.Device{Hostname: hostname, Ip: ip, Login: login, Password: password, Key: key})
 		if err != nil {
 			log.Println(err)
 		}
@@ -280,7 +280,7 @@ func NewHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	PageTemplates["new.html"].Execute(w, NewEdit{"New", common.Device{}, 4, ""})
+	PageTemplates["new.html"].Execute(w, NewEdit{"New", utils.Device{}, 4, ""})
 }
 
 func EditHtml(w http.ResponseWriter, r *http.Request) {
@@ -298,7 +298,7 @@ func EditHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	database, err := common.ConnectToDatabase(&PageConfig.Database)
+	database, err := utils.ConnectToDatabase(&PageConfig.Database)
 	if err != nil {
 		log.Println("Error while opening database")
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -306,7 +306,7 @@ func EditHtml(w http.ResponseWriter, r *http.Request) {
 	}
 	defer database.Close()
 
-	device, err := common.GetDevice(database, id)
+	device, err := utils.GetDevice(database, id)
 	if err != nil {
 		log.Println(err)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -356,7 +356,7 @@ func EditHtml(w http.ResponseWriter, r *http.Request) {
 
 		device.Hostname, device.Ip, device.Login = hostname, ip, login
 
-		common.UpdateDevice(database, device)
+		utils.UpdateDevice(database, device)
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -381,14 +381,14 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		database, err := common.ConnectToDatabase(&PageConfig.Database)
+		database, err := utils.ConnectToDatabase(&PageConfig.Database)
 		if err != nil {
 			log.Println("Error while opening database")
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
-		err = common.DeleteDevice(database, id)
+		err = utils.DeleteDevice(database, id)
 		if err != nil {
 			log.Println(err)
 		}
@@ -404,7 +404,7 @@ func LogOut(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
 
-func StartServer(serverConfig *common.Config, templatesDir *string, staticDir *string) error {
+func StartServer(serverConfig *utils.Config, templatesDir *string, staticDir *string) error {
 	Sessions = make(map[string]Session)
 	PageTemplates = make(map[string]*template.Template)
 	if err := InitTemplates(templatesDir); err != nil {

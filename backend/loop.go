@@ -4,24 +4,24 @@ import (
 	"log"
 	"time"
 
-	common "pi-wegrzyn/common"
+	"pi-wegrzyn/utils"
 )
 
 type DeviceSignalsHolder struct {
-	DevicePointer *common.Device
+	DevicePointer *utils.Device
 	SignalIn      chan bool
 	SignalOut     chan bool
 }
 
-func StartLoop(serverConfig *common.Config) error {
+func StartLoop(serverConfig *utils.Config) error {
 	for {
-		database, err := common.ConnectToDatabase(&serverConfig.Database)
+		database, err := utils.ConnectToDatabase(&serverConfig.Database)
 		if err != nil {
 			return err
 		}
 		defer database.Close()
 
-		devices, err := common.GetDevices(database)
+		devices, err := utils.GetDevices(database)
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func StartLoop(serverConfig *common.Config) error {
 				devices[device].Connected = time.Now().Format("2006-01-02 15:04:05")
 			}
 
-			err = common.UpdateDeviceStatus(database, devices[device])
+			err = utils.UpdateDeviceStatus(database, devices[device])
 			if err != nil {
 				log.Printf("Error while updating device with ID: %d (%s)\n", devices[device].Id, err)
 			}

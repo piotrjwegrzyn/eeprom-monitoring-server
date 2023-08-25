@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	common "pi-wegrzyn/common"
+
+	"pi-wegrzyn/utils"
 )
 
 const version string = "2.0"
@@ -38,8 +39,8 @@ func main() {
 
 	log.Println("Frontend module started")
 
-	config := common.Config{}
-	common.GetConfig(*configFilename, &config)
+	config := utils.Config{}
+	utils.GetConfig(*configFilename, &config)
 
 	if err := StartServer(&config, templatesDir, staticDir); err != nil {
 		log.Fatalf("Server failed with: %s\n", err)

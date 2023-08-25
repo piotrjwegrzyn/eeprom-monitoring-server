@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	common "pi-wegrzyn/common"
+	"pi-wegrzyn/utils"
 )
 
 const version string = "1.2"
@@ -31,8 +31,8 @@ func main() {
 
 	log.Println("Backend module started")
 
-	config := common.Config{}
-	common.GetConfig(*configFilename, &config)
+	config := utils.Config{}
+	utils.GetConfig(*configFilename, &config)
 
 	log.Printf("Startup delay set for %d seconds\n", config.Intervals.StartupDelay)
 	time.Sleep(time.Duration(config.Intervals.StartupDelay) * time.Second)

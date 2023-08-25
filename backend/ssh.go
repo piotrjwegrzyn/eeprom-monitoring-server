@@ -7,16 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ssh"
+	"pi-wegrzyn/utils"
 
-	common "pi-wegrzyn/common"
+	"golang.org/x/crypto/ssh"
 )
 
 const SHOW_EEPROM_CMD string = "show-eeprom %s"
 const SHOW_FIBER_INTERFACES_CMD string = "show-fiber-interfaces"
 const EEPROM_DECODER_TYPE int = 0
 
-func UnifyEeprom(device *common.Device, input []byte) []byte {
+func UnifyEeprom(device *utils.Device, input []byte) []byte {
 	if EEPROM_DECODER_TYPE == 0 {
 		temp := []byte{}
 		for i := 0; i < len(input); i += 33 {
@@ -35,9 +35,9 @@ func UnifyEeprom(device *common.Device, input []byte) []byte {
 	}
 }
 
-func ProcessData(device *common.Device, eeprom []byte) common.InterfaceData {
+func ProcessData(device *utils.Device, eeprom []byte) utils.InterfaceData {
 	eeprom = UnifyEeprom(device, eeprom)
-	return common.InterfaceData{
+	return utils.InterfaceData{
 		Temperature: GetTemperature(eeprom),
 		Voltage:     GetVoltage(eeprom),
 		TxPower:     GetTxPower(eeprom),
@@ -46,7 +46,7 @@ func ProcessData(device *common.Device, eeprom []byte) common.InterfaceData {
 	}
 }
 
-func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
+func CreateSshClient(device *utils.Device) (session *ssh.Client, err error) {
 	sshConfig := &ssh.ClientConfig{
 		User:            device.Login,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -71,7 +71,7 @@ func CreateSshClient(device *common.Device) (session *ssh.Client, err error) {
 	return client, nil
 }
 
-func MonitorData(device *common.Device, influxConfig *common.InfluxConfig, inputSig <-chan bool, outputSig chan<- bool, timeSleep int) {
+func MonitorData(device *utils.Device, influxConfig *utils.InfluxConfig, inputSig <-chan bool, outputSig chan<- bool, timeSleep int) {
 	log.Printf("Started goroutine for device with ID: %d\n", device.Id)
 
 CLIENT_CREATION:
@@ -136,7 +136,7 @@ CLIENT_CREATION:
 				}
 
 				interfaceData := ProcessData(device, byteOutput)
-				common.InsertToInflux(influxConfig, device.Hostname, interfaces[i], &interfaceData)
+				utils.InsertToInflux(influxConfig, device.Hostname, interfaces[i], &interfaceData)
 			}
 
 			time.Sleep(time.Duration(timeSleep) * time.Second)
