@@ -1,13 +1,13 @@
 #!/bin/sh
 
-for iteration in $(seq 1 $ITERATIONS);
+for iteration in $(seq 1 $EEPROM_ITER);
 do
-    for interface in $(find $FIN_DIR/eeproms/* -type d | sed 's/\/.*\///')
+    for interface in $(find $EP_DIR/eeprom/* -type d | sed 's/\/.*\///')
     do
-        file=$(printf $FIN_DIR/eeproms/$interface/$interface-%09d $iteration)
+        file=$(printf $EP_DIR/eeprom/$interface/$interface-%09d $iteration)
         if test -f "$file";
         then
-            ln -sf $file $FIN_DIR/interfaces/$interface
+            ln -sf $file $EP_DIR/interfaces/$interface
         fi
     done
     sleep $SLEEP_TIME

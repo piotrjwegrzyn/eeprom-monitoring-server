@@ -11,8 +11,8 @@ then
     exit 1
 fi
 
-xxd -p -c 16 $FIN_DIR/interfaces/$1 2> /dev/null
+xxd -p -c 16 $EP_DIR/interfaces/$1 2> /dev/null
 # Alternatively:
-# xxd $FIN_DIR/interfaces/$1
-# hexdump -v -C $FIN_DIR/interfaces/$1
-# hexdump -v $FIN_DIR/interfaces/$1
+# xxd $EP_DIR/interfaces/$1
+# hexdump -v -C $EP_DIR/interfaces/$1
+# hexdump -v $EP_DIR/interfaces/$1

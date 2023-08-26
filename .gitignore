@@ -7,4 +7,4 @@ frontend/frontend
 backend/backend
 presenter/presenter
 
-presenter/eeproms/*
+presenter/eeprom/*
