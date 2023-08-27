@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for iteration in $(seq 1 $EEPROM_ITER);
+for iteration in $(seq 0 $EEPROM_ITER);
 do
     for interface in $(find $EP_DIR/eeprom/* -type d | sed 's/\/.*\///')
     do

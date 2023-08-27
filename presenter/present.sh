@@ -5,7 +5,7 @@ then
     exit 1
 fi
 
-ip addr show $1 &> /dev/null
+ip addr show $1 > /dev/null 2>&1
 if [ $? -ne 0 ];
 then
     exit 1

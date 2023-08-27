@@ -129,36 +129,6 @@ Unlike other files config path might be provided explicitly.
 
 Sample database file is attached in `config/` folder (tested on MariaDB 10.9.2).
 
-# eeprom-generator
-Simple tool for generating some EEPROM pages of optical modules. Compatible with CMIS 5.
-
-## Pages that are (partially) supported:
-* Lower page
-* Page 00h
-* Page 01h
-* Page 02h
-* Page 04h
-* Page 11h
-* Page 12h
-* Page 25h (OSNR only)
-
-## Compilation
-Open folder in CMD/Terminal and type:
-```
-go build
-```
-Tested on Go 1.19.
-
-## Usage
-Type in CMD/Terminal:
-```
-./eeprom-generator -scenario <SCENARIO_CONFIG.yaml> -modules <MODULES_CONFIG.yaml> -location <YOUR_PATH>
-```
-
-## Config creation
-Sample config files are provided.
-
-
 # eeprom-presenter
 Simple container with commands to list optical interfaces and show EEPROM on them.
 
@@ -195,3 +165,50 @@ SSH to our GNS3 server and build container as above. Then follow [that guide](ht
 
 ## License
 All software is under GNU GPL version 3.
+
+# Draft: New README
+## eeprom-generator
+Simple tool for generating some EEPROM pages of optical modules based on scenario predefined. Compatible with CMIS 5. Pages that are (partially) supported:
+* Lower page
+* Page 00h
+* Page 01h
+* Page 02h
+* Page 04h
+* Page 11h
+* Page 12h
+* Page 25h (OSNR only)
+
+### Usage
+Type in CMD/Terminal:
+```
+./eeprom-generator -c <CONFIG_FILE.yaml> -o <OUTPUT_PATH>
+```
+
+### Config file
+Sample config file is provided in `testdata/generator.yaml`. 
+In configuration file there is a scenario's duration defined in seconds and modules list. The `Modules` list contains an interface name, CMIS content data and a `Scenario` with a bunch of fiber-working parameters as below:
+
+```
+  Scenario:
+    Temperature:
+      - endval: 33.0
+        duration: 120
+      - endval: 32.0
+        duration: 180
+```
+
+For the first 120 seconds the value of `Temperature` will be interpreted as `33.0` like a linear function with start and end points (X, Y) set as (1, 33.0) and (33.0, 120). Then from the 121st second till the end (120+180) the `Temperature` will slowly decrease like a linear function with starting point (X, Y) as (121, 33.0) and ending point as (300, 32.0).
+
+If there is a need of preparing an instant change we are able to change that defining a one-second-event as the middle step below:
+```
+  Scenario:
+    Temperature:
+      - endval: 33.0
+        duration: 120
+      - endval: 10.0
+        duration: 1
+      - endval: 10.0
+        duration: 179
+```
+
+**Note**: the very first step will always be a flat function with defined `endval`. If you want to start linear change from the beginning you should create one-second-event step.

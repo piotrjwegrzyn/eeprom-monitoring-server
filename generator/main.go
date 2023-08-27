@@ -3,21 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path"
 
 	"pi-wegrzyn/generator/cmds"
 )
 
-const version string = "1.2.1"
+var version string
 
 func main() {
-
-	var scenarioFilename = flag.String("scenario", "scenario.yaml", "Location of scenario yaml config")
-	var modulesFilename = flag.String("modules", "modules.yaml", "Location of modules yaml config")
-	var outputPath = flag.String("location", ".", "Output location of EEPROM files")
-	var info = flag.Bool("version", false, "Print version")
-
+	configPath := flag.String("c", "config.yaml", "Path to configuration file")
+	outputPath := flag.String("o", ".", "Output location of EEPROM files")
+	info := flag.Bool("v", false, "Print version")
 	flag.Parse()
 
 	if *info {
@@ -25,13 +23,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	scenarioConfig := cmds.ScenarioConfig{}
-	modulesConfig := cmds.ModulesConfig{}
+	var cfg cmds.Config
+	if err := cmds.ReadConfig(*configPath, &cfg); err != nil {
+		log.Fatalf("Cannot read configuration: %v\n", err)
+	}
 
-	cmds.GetConfig(*scenarioFilename, &scenarioConfig)
-	cmds.GetConfig(*modulesFilename, &modulesConfig)
+	for i := 0; i < len(cfg.Modules); i++ {
+		out := path.Join(*outputPath, cfg.Modules[i].Interface)
+		timelapse, err := cmds.CreateTimelapse(cfg.Modules[i], cfg.Duration)
+		if err != nil {
+			log.Fatalf("Cannot generate timelapse: %v", err)
+		}
 
-	cmds.EepromToFiles(path.Join(*outputPath, "netdev1"), modulesConfig.Modules[0].Interface, cmds.CreateTimelapse(modulesConfig.Modules[0], scenarioConfig.ScenarioModules[0], scenarioConfig.Duration))
-	cmds.EepromToFiles(path.Join(*outputPath, "netdev2"), modulesConfig.Modules[1].Interface, cmds.CreateTimelapse(modulesConfig.Modules[1], scenarioConfig.ScenarioModules[1], scenarioConfig.Duration))
-
+		if err := cmds.SaveToFile(out, cfg.Modules[i].Interface, timelapse); err != nil {
+			log.Fatalf("Cannot save file: %v", err)
+		}
+	}
 }

@@ -1,14 +1,19 @@
 package cmds
 
 import (
-	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
+type Config struct {
+	Duration int      `yaml:"Duration"`
+	Modules  []Module `yaml:"Modules"`
+}
 type Module struct {
-	Interface                          string  `yaml:"Interface"`
+	Interface string `yaml:"Interface"`
+
+	// CMIS parameters
 	SFF8024Identifier                  int     `yaml:"SFF8024Identifier"`
 	CmisRevision                       int     `yaml:"CmisRevision"`
 	ModuleRevision                     int     `yaml:"ModuleRevision"`
@@ -32,18 +37,11 @@ type Module struct {
 	GridSpacingTxx                     int     `yaml:"GridSpacingTxx"`
 	CurrentLaserFrequencyTxx           int     `yaml:"CurrentLaserFrequencyTxx"`
 	TargetOutputPowerTxx               float64 `yaml:"TargetOutputPowerTxx"`
+
+	Scenario Scenario `yaml:"Scenario"`
 }
 
-type ModulesConfig struct {
-	Modules []Module `yaml:"Modules"`
-}
-
-type Step struct {
-	Endval   float64 `yaml:"endval"`
-	Duration int     `yaml:"duration"`
-}
-
-type ScenarioModule struct {
+type Scenario struct {
 	Voltage     []Step `yaml:"Voltage"`
 	Temperature []Step `yaml:"Temperature"`
 	TxPower     []Step `yaml:"TxPower"`
@@ -51,24 +49,20 @@ type ScenarioModule struct {
 	Osnr        []Step `yaml:"Osnr"`
 }
 
-type ScenarioConfig struct {
-	Duration        int              `yaml:"ScenarioDuration"`
-	ScenarioModules []ScenarioModule `yaml:"ScenarioModules"`
+type Step struct {
+	Endval   float64 `yaml:"endval"`
+	Duration int     `yaml:"duration"`
 }
 
-func GetConfig[Config ModulesConfig | ScenarioConfig](filename string, configYaml *Config) {
-
-	modulesConfig, err := os.ReadFile(filename)
-
+func ReadConfig(filename string, out *Config) error {
+	cfg, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("Error while opening file %s\n", filename)
-		os.Exit(0)
+		return err
 	}
 
-	err = yaml.Unmarshal(modulesConfig, configYaml)
-
-	if err != nil {
-		fmt.Printf("Error while parsing file %s\n", filename)
-		os.Exit(0)
+	if err = yaml.Unmarshal(cfg, out); err != nil {
+		return err
 	}
+
+	return nil
 }

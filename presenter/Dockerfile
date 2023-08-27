@@ -1,8 +1,9 @@
 FROM ubuntu:latest
 LABEL VERSION=latest
 
-ARG EEPROM_ITER=299
+ARG EEPROM_ITER=300
 ARG SLEEP_TIME=1
+ARG EEPROM_SRC
 
 ENV EP_DIR=/usr/src/eeprom-presenter
 ENV EEPROM_ITER=${EEPROM_ITER}
@@ -23,8 +24,8 @@ RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config
 
 # Setting up program
-COPY present.sh update.sh ${EP_DIR}
-COPY eeprom ${EP_DIR}/eeprom/
+COPY presenter/present.sh presenter/update.sh ${EP_DIR}
+COPY ${EEPROM_SRC} ${EP_DIR}/eeprom/
 
 RUN mkdir ${EP_DIR}/interfaces && \
     for interface in $(find ${EP_DIR}/eeprom/* -type d | sed 's/\/.*\///'); \
@@ -41,6 +42,6 @@ RUN ln -s ${EP_DIR}/present.sh /usr/bin/show-eeprom && \
     chmod +x /usr/bin/show-fiber-interfaces
 
 WORKDIR /root
-ENTRYPOINT service ssh start &> /dev/null && ${EP_DIR}/update.sh & /bin/sh
+ENTRYPOINT service ssh start > /dev/null 2>&1 && ${EP_DIR}/update.sh & /bin/sh
 
 EXPOSE 22
