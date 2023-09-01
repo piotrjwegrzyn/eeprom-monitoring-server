@@ -33,10 +33,10 @@ func main() {
 	log.Println("Backend module started")
 
 	config := utils.Config{}
-	utils.GetConfig(*configFilename, &config)
+	utils.ReadConfig(*configFilename, &config)
 
-	log.Printf("Startup delay set for %d seconds\n", config.Intervals.StartupDelay)
-	time.Sleep(time.Duration(config.Intervals.StartupDelay) * time.Second)
+	log.Printf("Startup delay set for %d seconds\n", config.Delays.Startup)
+	time.Sleep(time.Duration(config.Delays.Startup) * time.Second)
 
 	if err := cmds.StartLoop(&config); err != nil {
 		log.Fatalf("Server failed with: %s\n", err)

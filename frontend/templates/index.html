@@ -22,15 +22,15 @@
             {{range .}}
             <div class="device">
                 <span style="grid-area: hostname; font-size: x-large;">{{.Hostname}}</span>
-                <span style="grid-area: login-ip;" class="login-ip">{{.Login}}@{{.Ip}}</span>
+                <span style="grid-area: login-ip;" class="login-ip">{{.Login}}@{{.IP}}</span>
                 <form class="button-holder" action="/edit" method="get">
-                    <button style="grid-area: edit;" name="edit-id" value="{{.Id}}">EDIT</button>
+                    <button style="grid-area: edit;" name="edit-id" value="{{.ID}}">EDIT</button>
                 </form>
                 <span style="grid-column: 1 / 3; grid-row: 3 / 4;">
-                    {{.GetStatusConnected}}
+                    {{.StatusConnected}}
                 </span>
                 <form class="button-holder" style="grid-area: delete;" action="/delete" method="post">
-                    <button name="delete-id" value="{{.Id}}">DELETE</button>
+                    <button name="delete-id" value="{{.ID}}">DELETE</button>
                 </form>
             </div>
             {{end}}

@@ -8,7 +8,7 @@ backend:
 
 .PHONY: frontend
 frontend:
-	go build -C frontend -o ../bin/ems-frontend
+	go build -C frontend -o ../bin/ems-frontend -ldflags "-X main.version=$(VERSION)"
 
 .PHONY: influxdb
 influxdb:
@@ -19,7 +19,9 @@ influxdb:
 
 .PHONY: ems
 ems:
-	@echo ems
+	docker build --no-cache \
+	--file Dockerfile \
+	--tag pi-wegrzyn/ems:$(VERSION) .
 
 .PHONY: generator
 generator:

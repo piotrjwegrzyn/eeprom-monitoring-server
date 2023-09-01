@@ -1,11 +1,5 @@
 package cmds
 
-import (
-	"os"
-
-	"gopkg.in/yaml.v2"
-)
-
 type Config struct {
 	Duration int      `yaml:"Duration"`
 	Modules  []Module `yaml:"Modules"`
@@ -52,17 +46,4 @@ type Scenario struct {
 type Step struct {
 	Endval   float64 `yaml:"endval"`
 	Duration int     `yaml:"duration"`
-}
-
-func ReadConfig(filename string, out *Config) error {
-	cfg, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	if err = yaml.Unmarshal(cfg, out); err != nil {
-		return err
-	}
-
-	return nil
 }

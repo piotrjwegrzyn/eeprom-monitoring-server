@@ -1,41 +1,43 @@
 FROM ubuntu:latest
-LABEL VERSION=__version
+LABEL VERSION=latest
 
-ARG CONFIG=__config_file
-ARG USER=__config_user
-ARG PASSWORD=__config_password
-ARG DB_USER=__config_db_user
-ARG DB_PASSWORD=__config_db_password
-ARG DB_NAME=__config_db_name
-ARG PORT=__config_port
-ARG BUCKET=__config_bucket
-ARG ORG=__config_org
-ARG TOKEN=__config_token
-ARG RETENTION=__config_retention
+ARG CONFIG=./testdata/ems.yaml
+ARG MYSQL_USER=http
+ARG MYSQL_PASSWORD=http-password
+ARG DBNAME=ems
+ARG PORT=80
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
 
-COPY ./frontend/frontend /usr/bin/eeprom-monitoring-server-frontend
-COPY ./backend/backend /usr/bin/eeprom-monitoring-server-backend
-COPY ./static/ /etc/eeprom-monitoring-server/static/
-COPY ./templates/ /etc/eeprom-monitoring-server/templates/
-COPY ./${CONFIG} /etc/eeprom-monitoring-server/config.yaml
-COPY ./config/mysql.dump /tmp/database.dump
-COPY ./influx/influxd /usr/bin/influxd
-COPY ./influx/influx /usr/bin/influx
+COPY ./bin/ems-frontend /usr/bin/ems-frontend
+COPY ./bin/ems-backend /usr/bin/ems-backend
+COPY ./frontend/static/ /etc/ems/static/
+COPY ./frontend/templates/ /etc/ems/templates/
+COPY ${CONFIG} /etc/ems/config.yaml
+COPY ./testdata/mysql.dump /tmp/database.dump
+COPY ./bin/influxd /usr/bin/influxd
+COPY ./bin/influxc /usr/bin/influx
 
 RUN /usr/sbin/mysqld & sleep 5 && \
-    mysql -u root -e "CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" && \
-    mysql -u root -e "CREATE DATABASE \`${DB_NAME}\`" && \
-    mysql -u root -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';" && \
+    mysql -u root -e "CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';" && \
+    mysql -u root -e "CREATE DATABASE \`${DBNAME}\`" && \
+    mysql -u root -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* TO '${MYSQL_USER}'@'localhost';" && \
     mysql -u root -e "FLUSH PRIVILEGES;" && \
-    mysql ${DB_NAME} < /tmp/database.dump
+    mysql $(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}') < /tmp/database.dump
+
 RUN /usr/bin/influxd & sleep 5 && \
-    /usr/bin/influx setup -u ${USER} -p ${PASSWORD} -t ${TOKEN} -o ${ORG} -b ${BUCKET} -r ${RETENTION} -f -n default --host http://:8086
+    /usr/bin/influx setup \
+    -u $(grep -1 "users" /etc/ems/config.yaml | tail -1 | awk '{printf substr($1, 1, length($1)-1)}') \
+    -p $(grep -1 "users" /etc/ems/config.yaml | tail -1 | awk '{printf $2}') \
+    -t $(grep "token" /etc/ems/config.yaml | awk '{printf $2}') \
+    -o $(grep "org" /etc/ems/config.yaml | awk '{printf $2}') \
+    -b $(grep "bucket" /etc/ems/config.yaml | awk '{printf $2}') \
+    -r $(grep "retention" /etc/ems/config.yaml | awk '{printf $2}') \
+    -f -n default --host http://:8086
 
 ENTRYPOINT /usr/sbin/mysqld & sleep 2 && /usr/bin/influxd & sleep 2 && \
-    /usr/bin/eeprom-monitoring-server-frontend -static /etc/eeprom-monitoring-server/static/ -templates /etc/eeprom-monitoring-server/templates/ -config /etc/eeprom-monitoring-server/config.yaml & \
-    /usr/bin/eeprom-monitoring-server-backend -config /etc/eeprom-monitoring-server/config.yaml & bash
+    /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & \
+    /usr/bin/ems-backend -config /etc/ems/config.yaml & bash
 
 EXPOSE ${PORT}
 EXPOSE 8086

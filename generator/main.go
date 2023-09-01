@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"pi-wegrzyn/generator/cmds"
+	"pi-wegrzyn/utils"
 )
 
 var version string
@@ -24,7 +25,7 @@ func main() {
 	}
 
 	var cfg cmds.Config
-	if err := cmds.ReadConfig(*configPath, &cfg); err != nil {
+	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
 		log.Fatalf("Cannot read configuration: %v\n", err)
 	}
 

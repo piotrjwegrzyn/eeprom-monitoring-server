@@ -11,14 +11,23 @@ import (
 	"pi-wegrzyn/utils"
 )
 
-const version string = "2.0"
+var version string
+
+func statPaths(paths []string) error {
+	for _, p := range paths {
+		if _, err := os.Stat(p); errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func main() {
-	var configFilename = flag.String("config", "config.yaml", "Path to config file (YAML file)")
-	var templatesDir = flag.String("templates", "templates/", "Path to templates directory (HTML files)")
-	var staticDir = flag.String("static", "static/", "Path to static files (CSS and favicon)")
-	var info = flag.Bool("version", false, "Print version")
-
+	configPath := flag.String("c", "config.yaml", "Path to config file (YAML file)")
+	templatesPath := flag.String("t", "templates/", "Path to templates directory (HTML files)")
+	staticDir := flag.String("s", "static/", "Path to static files (CSS and favicon)")
+	info := flag.Bool("v", false, "Print version")
 	flag.Parse()
 
 	if *info {
@@ -26,24 +35,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	if _, err := os.Stat(*configFilename); errors.Is(err, os.ErrNotExist) {
-		log.Fatalf("Config file (%s) does not exist\n", *configFilename)
+	if err := statPaths([]string{*configPath, *templatesPath, *staticDir}); err != nil {
+		log.Fatalf("Cannot use provided paths: %v\n", err)
 	}
 
-	if _, err := os.Stat(*templatesDir); errors.Is(err, os.ErrNotExist) {
-		log.Fatalf("Templates directory (%s) does not exist\n", *templatesDir)
+	var cfg utils.Config
+	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
+		log.Fatalf("Cannot read configuration: %v\n", err)
 	}
 
-	if _, err := os.Stat(*staticDir); errors.Is(err, os.ErrNotExist) {
-		log.Fatalf("Static directory (%s) does not exist\n", *staticDir)
+	server, err := cmds.NewServer(&cfg, *templatesPath)
+	if err != nil {
+		log.Fatalf("Cannot prepare server: %v\n", err)
 	}
 
-	log.Println("Frontend module started")
-
-	config := utils.Config{}
-	utils.GetConfig(*configFilename, &config)
-
-	if err := cmds.StartServer(&config, templatesDir, staticDir); err != nil {
-		log.Fatalf("Server failed with: %s\n", err)
+	if err := server.Start(*staticDir); err != nil {
+		log.Fatalf("Server failed to start: %v\n", err)
 	}
 }

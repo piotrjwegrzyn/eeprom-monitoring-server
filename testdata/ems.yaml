@@ -1,26 +1,28 @@
 ---
-# Web credentials 
-Users:
-  ems_login: ems_password
-# MySQL config
-Database:
-  User: http
-  Passwd: http-password
-  Net:    tcp
-  Addr:   127.0.0.1:3306
-  DBName: http-database
+# Web credentials (multiple entries only for devices' config page)
+users:
+  login: password
+
+mysql:
+  username: http
+  password: http-password
+  protocol: tcp
+  address: 127.0.0.1:3306
+  dbname: ems
+
 # Port for devices' config page
-Port: 80
+port: 80
+
 # Time steps for loop
-Intervals: # in seconds
-  StartupDelay: 15
-  SqlQueryInt: 50 # syncing with database
-  SshQueryInt: 5 # polling devices over SSH
-# Influx config
-Influx:
-  Bucket: ems-bucket
-  Org: eeprom-monitoring-server
-  Token: v3rY-d1ff1cUlT-t0k3n
-  Url: http://localhost:8086
-  Retention: 24h
+delays: # in seconds
+  startup: 10
+  sql: 30 # syncing with database
+  ssh: 3 # polling devices over SSH
+
+influx:
+  bucket: ems
+  org: eeprom-monitoring-server
+  token: v3rY-d1ff1cUlT-t0k3n
+  url: http://localhost:8086
+  retention: 24h
 ...

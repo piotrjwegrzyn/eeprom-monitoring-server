@@ -1,57 +1,34 @@
 package utils
 
 import (
-	"fmt"
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
-type DbConfig struct {
-	User   string `yaml:"User"`
-	Passwd string `yaml:"Passwd"`
-	Net    string `yaml:"Net"`
-	Addr   string `yaml:"Addr"`
-	DBName string `yaml:"DBName"`
-}
-
-func (dbConfig *DbConfig) String() string {
-	return fmt.Sprintf("%s:%s@%s(%s)/%s", dbConfig.User, dbConfig.Passwd, dbConfig.Net, dbConfig.Addr, dbConfig.DBName)
-}
-
-type Intervals struct {
-	StartupDelay int `yaml:"StartupDelay"`
-	SqlQueryInt  int `yaml:"SqlQueryInt"`
-	SshQueryInt  int `yaml:"SshQueryInt"`
-}
-
-type InfluxConfig struct {
-	Bucket string `yaml:"Bucket"`
-	Org    string `yaml:"Org"`
-	Token  string `yaml:"Token"`
-	Url    string `yaml:"Url"`
+type Delays struct {
+	Startup int `yaml:"startup"`
+	Query   int `yaml:"query"`
+	SSH     int `yaml:"ssh"`
 }
 
 type Config struct {
-	Users     map[string]string `yaml:"Users"`
-	Database  DbConfig          `yaml:"Database"`
-	Port      int               `yaml:"Port"`
-	Intervals Intervals         `yaml:"Intervals"`
-	Influx    InfluxConfig      `yaml:"Influx"`
+	Users  map[string]string `yaml:"users"`
+	MySQL  MySQL             `yaml:"mysql"`
+	Port   int               `yaml:"port"`
+	Delays Delays            `yaml:"delays"`
+	Influx Influx            `yaml:"influx"`
 }
 
-func GetConfig(filename string, configYaml *Config) {
-
-	configFile, err := os.ReadFile(filename)
-
+func ReadConfig(filename string, out any) error {
+	cfg, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("Error while opening file %s\n", filename)
+		return err
 	}
 
-	err = yaml.Unmarshal(configFile, configYaml)
-
-	if err != nil {
-		log.Fatalf("Error while parsing file %s\n", filename)
+	if err = yaml.Unmarshal(cfg, out); err != nil {
+		return err
 	}
+
+	return nil
 }
