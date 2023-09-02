@@ -10,9 +10,9 @@ import (
 )
 
 type Delays struct {
-	Startup int `yaml:"startup"`
-	SQL     int `yaml:"sql"`
-	SSH     int `yaml:"ssh"`
+	Startup float32 `yaml:"startup"`
+	SQL     float32 `yaml:"sql"`
+	SSH     float32 `yaml:"ssh"`
 }
 
 type Config struct {
@@ -47,6 +47,6 @@ func StatPaths(paths []string) error {
 }
 
 func AdjustLogger(prefix string) {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
+	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lmsgprefix)
 	log.SetPrefix(fmt.Sprintf("%10s: ", prefix))
 }

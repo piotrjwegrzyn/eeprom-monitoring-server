@@ -58,11 +58,11 @@ func (db *Database) UpdateDevice(dev dbDevice) error {
 	}
 
 	if affected, _ := result.RowsAffected(); affected == 1 {
-		log.Printf("Updated device with ID: %d\n", d.ID)
+		log.Printf("Updated (device ID: %d)\n", d.ID)
 	} else if affected == 0 {
-		log.Printf("Nothing happen with update device with ID: %d (%d rows affected)\n", d.ID, affected)
+		log.Printf("Nothing happen with update (device ID: %d) (%d rows affected)\n", d.ID, affected)
 	} else {
-		return fmt.Errorf("%d rows affected during update device with ID: %d", affected, d.ID)
+		return fmt.Errorf("%d rows affected during update (device ID: %d)", affected, d.ID)
 	}
 
 	return nil
@@ -82,7 +82,7 @@ func (db *Database) UpdateDeviceStatus(dev dbDevice) error {
 		return err
 	}
 
-	log.Printf("Updated device with ID: %d\n", current.ID)
+	log.Printf("Updated (device ID: %d)\n", current.ID)
 	return nil
 }
 
@@ -98,11 +98,11 @@ func (db *Database) DeleteDevice(id int) error {
 	}
 
 	if affected, _ := result.RowsAffected(); affected == 1 {
-		log.Printf("Deleted device with ID: %d\n", id)
+		log.Printf("Deleted (device ID: %d)\n", id)
 	} else if affected == 0 {
-		log.Printf("Nothing happen with deletion device with ID: %d (%d rows affected)\n", id, affected)
+		log.Printf("Nothing happen with deletion (device ID: %d) (%d rows affected)\n", id, affected)
 	} else {
-		return fmt.Errorf("%d rows affected during deletion device with ID: %d", affected, id)
+		return fmt.Errorf("%d rows affected during deletion (device ID: %d)", affected, id)
 	}
 
 	return nil

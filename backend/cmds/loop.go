@@ -10,45 +10,17 @@ import (
 )
 
 type server struct {
-	config     utils.Config
-	database   utils.Database
-	connectors []*connector
+	config   utils.Config
+	database utils.Database
+	remotes  []*remoteDevice
 }
 
 func NewServer(cfg *utils.Config) *server {
 	return &server{config: *cfg}
 }
 
-type connector struct {
-	remoteDevice
-	In  chan bool
-	Out chan bool
-}
-
-func (s *server) prepareSignalHolders() error {
-	devices, err := s.database.GetDevices()
-	if err != nil {
-		return err
-	}
-
-	for _, dev := range devices {
-		c := connector{
-			remoteDevice{dev},
-			make(chan bool, 1),
-			make(chan bool, 1),
-		}
-
-		s.connectors = append(s.connectors, &c)
-
-		go c.MonitorData(&s.config.Influx, c.In, c.Out, s.config.Delays.SSH)
-	}
-
-	log.Printf("Prepared %d signallers\n", len(s.connectors))
-	return nil
-}
-
 func (s *server) Loop() error {
-	log.Printf("Startup delay set for %d seconds\n", s.config.Delays.Startup)
+	log.Printf("Startup delay set for %.1f seconds\n", s.config.Delays.Startup)
 	time.Sleep(time.Duration(s.config.Delays.Startup) * time.Second)
 
 	log.Println("Backend module started")
@@ -60,11 +32,11 @@ func (s *server) Loop() error {
 		}
 		defer s.database.Close()
 
-		if err = s.prepareSignalHolders(); err != nil {
+		if err = s.prepareRemotes(); err != nil {
 			return err
 		}
 
-		log.Printf("SQL delay set to %d seconds\n", s.config.Delays.SQL)
+		log.Printf("SQL delay set to %.1f seconds\n", s.config.Delays.SQL)
 		timestamp := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL))
 		for time.Now().Before(timestamp) {
 			continue
@@ -77,28 +49,44 @@ func (s *server) Loop() error {
 	}
 }
 
+func (s *server) prepareRemotes() error {
+	devices, err := s.database.GetDevices()
+	if err != nil {
+		return err
+	}
+
+	s.remotes = []*remoteDevice{}
+	for _, dev := range devices {
+		c := NewRemoteDevice(dev, defaultDecoder)
+
+		s.remotes = append(s.remotes, c)
+
+		timeLimit := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL-0.5))
+		timeSleep := time.Duration(s.config.Delays.SSH) * time.Second
+
+		go c.Monitor(&s.config.Influx, timeLimit, timeSleep)
+	}
+
+	log.Printf("Prepared %d signallers\n", len(s.remotes))
+	return nil
+}
+
 func (s *server) checkSignalsLoop() (err error) {
-	for _, c := range s.connectors {
+	for _, c := range s.remotes {
 		select {
-		case <-c.Out:
-			log.Printf("Detected error signal from device with ID: %d\n", c.ID)
-			if c.Status != utils.STATUS_ERROR_MISCONFIGURATION {
-				c.Status = utils.STATUS_ERROR_SSH
+		case out := <-c.Out:
+			log.Printf("Stopped goroutine (device ID: %d)\n", c.ID)
+			c.Status = out
+			if out == utils.STATUS_OK {
+				c.Connected = time.Now().Format("2006-01-02 15:04:05")
 			}
 		default:
-			log.Printf("Sending stop signal to device with ID: %d\n", c.ID)
-			c.In <- true
-
-			if c.Status != utils.STATUS_ERROR_SSH && c.Status != utils.STATUS_ERROR_MISCONFIGURATION {
-				c.Status = utils.STATUS_OK
-			}
-
-			c.Connected = time.Now().Format("2006-01-02 15:04:05")
+			log.Printf("Undefined state of goroutine (device ID: %d)\n", c.ID)
+			c.Status = utils.STATUS_UNKNOWN
 		}
 
-		err2 := s.database.UpdateDeviceStatus(*c)
-		if err2 != nil {
-			errors.Join(err, fmt.Errorf("error while updating device with ID: %d (%v)", c.ID, err2))
+		if err2 := s.database.UpdateDeviceStatus(*c); err2 != nil {
+			errors.Join(err, fmt.Errorf("error while updating device: %v (device ID: %d)", err2, c.ID))
 		}
 	}
 
