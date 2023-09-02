@@ -1,67 +1,106 @@
 package cmds
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
 	"pi-wegrzyn/utils"
 )
 
-type DeviceSignalsHolder struct {
-	DevicePointer *utils.Device
-	SignalIn      chan bool
-	SignalOut     chan bool
+type server struct {
+	config     utils.Config
+	database   utils.Database
+	connectors []*connector
 }
 
-func StartLoop(serverConfig *utils.Config) error {
+func NewServer(cfg *utils.Config) *server {
+	return &server{config: *cfg}
+}
+
+type connector struct {
+	remoteDevice
+	In  chan bool
+	Out chan bool
+}
+
+func (s *server) prepareSignalHolders() error {
+	devices, err := s.database.GetDevices()
+	if err != nil {
+		return err
+	}
+
+	for _, dev := range devices {
+		c := connector{
+			remoteDevice{dev},
+			make(chan bool, 1),
+			make(chan bool, 1),
+		}
+
+		s.connectors = append(s.connectors, &c)
+
+		go c.MonitorData(&s.config.Influx, c.In, c.Out, s.config.Delays.SSH)
+	}
+
+	log.Printf("Prepared %d signallers\n", len(s.connectors))
+	return nil
+}
+
+func (s *server) Loop() error {
+	log.Printf("Startup delay set for %d seconds\n", s.config.Delays.Startup)
+	time.Sleep(time.Duration(s.config.Delays.Startup) * time.Second)
+
+	log.Println("Backend module started")
 	for {
-		database, err := utils.ConnectToDatabase(&serverConfig.MySQL)
+		var err error
+		s.database, err = utils.ConnectToDatabase(&s.config.MySQL)
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer s.database.Close()
 
-		devices, err := database.GetDevices()
-		if err != nil {
+		if err = s.prepareSignalHolders(); err != nil {
 			return err
 		}
-		log.Printf("Got %d devices from database\n", len(devices))
 
-		SshSessions := []DeviceSignalsHolder{}
-
-		for device := range devices {
-			signals := DeviceSignalsHolder{&devices[device], make(chan bool, 1), make(chan bool, 1)}
-			SshSessions = append(SshSessions, signals)
-			go MonitorData(&devices[device], &serverConfig.Influx, signals.SignalIn, signals.SignalOut, serverConfig.Delays.SSH)
-		}
-
-		log.Printf("SQL check interval set to %d seconds\n", serverConfig.Delays.Query)
-
-		timestamp := time.Now().Add(time.Second * time.Duration(serverConfig.Delays.Query))
+		log.Printf("SQL delay set to %d seconds\n", s.config.Delays.SQL)
+		timestamp := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL))
 		for time.Now().Before(timestamp) {
 			continue
 		}
 
-		for device := range devices {
-			select {
-			case <-SshSessions[device].SignalOut:
-				log.Printf("Detected error signal from device with ID: %d\n", devices[device].ID)
-				if devices[device].Status != 2 {
-					devices[device].Status = 1
-				}
-			default:
-				log.Printf("Sending stop signal to device with ID: %d\n", devices[device].ID)
-				SshSessions[device].SignalIn <- true
-				if devices[device].Status != 1 && devices[device].Status != 2 {
-					devices[device].Status = 0
-				}
-				devices[device].Connected = time.Now().Format("2006-01-02 15:04:05")
-			}
-
-			err = database.UpdateDeviceStatus(devices[device])
-			if err != nil {
-				log.Printf("Error while updating device with ID: %d (%s)\n", devices[device].ID, err)
-			}
+		err = s.checkSignalsLoop()
+		if err != nil {
+			log.Printf("Error(s) occurred: %v\n", err)
 		}
 	}
+}
+
+func (s *server) checkSignalsLoop() (err error) {
+	for _, c := range s.connectors {
+		select {
+		case <-c.Out:
+			log.Printf("Detected error signal from device with ID: %d\n", c.ID)
+			if c.Status != utils.STATUS_ERROR_MISCONFIGURATION {
+				c.Status = utils.STATUS_ERROR_SSH
+			}
+		default:
+			log.Printf("Sending stop signal to device with ID: %d\n", c.ID)
+			c.In <- true
+
+			if c.Status != utils.STATUS_ERROR_SSH && c.Status != utils.STATUS_ERROR_MISCONFIGURATION {
+				c.Status = utils.STATUS_OK
+			}
+
+			c.Connected = time.Now().Format("2006-01-02 15:04:05")
+		}
+
+		err2 := s.database.UpdateDeviceStatus(*c)
+		if err2 != nil {
+			errors.Join(err, fmt.Errorf("error while updating device with ID: %d (%v)", c.ID, err2))
+		}
+	}
+
+	return
 }

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -13,16 +11,6 @@ import (
 
 var version string
 
-func statPaths(paths []string) error {
-	for _, p := range paths {
-		if _, err := os.Stat(p); errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func main() {
 	configPath := flag.String("c", "config.yaml", "Path to config file (YAML file)")
 	templatesPath := flag.String("t", "templates/", "Path to templates directory (HTML files)")
@@ -30,13 +18,15 @@ func main() {
 	info := flag.Bool("v", false, "Print version")
 	flag.Parse()
 
+	utils.AdjustLogger("frontend")
+
 	if *info {
-		fmt.Printf("Current version: %s\n", version)
+		log.Printf("Current version: %s\n", version)
 		os.Exit(0)
 	}
 
-	if err := statPaths([]string{*configPath, *templatesPath, *staticDir}); err != nil {
-		log.Fatalf("Cannot use provided paths: %v\n", err)
+	if err := utils.StatPaths([]string{*configPath, *templatesPath, *staticDir}); err != nil {
+		log.Fatalf("Cannot use provided path: %v\n", err)
 	}
 
 	var cfg utils.Config
@@ -50,6 +40,6 @@ func main() {
 	}
 
 	if err := server.Start(*staticDir); err != nil {
-		log.Fatalf("Server failed to start: %v\n", err)
+		log.Fatalf("Server failed: %v\n", err)
 	}
 }

@@ -1,13 +1,13 @@
 FROM ubuntu:latest
 LABEL VERSION=latest
 
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
+
 ARG CONFIG=./testdata/ems.yaml
 ARG MYSQL_USER=http
 ARG MYSQL_PASSWORD=http-password
 ARG DBNAME=ems
 ARG PORT=80
-
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
 
 COPY ./bin/ems-frontend /usr/bin/ems-frontend
 COPY ./bin/ems-backend /usr/bin/ems-backend
@@ -37,7 +37,7 @@ RUN /usr/bin/influxd & sleep 5 && \
 
 ENTRYPOINT /usr/sbin/mysqld & sleep 2 && /usr/bin/influxd & sleep 2 && \
     /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & \
-    /usr/bin/ems-backend -config /etc/ems/config.yaml & bash
+    /usr/bin/ems-backend -c /etc/ems/config.yaml & bash
 
 EXPOSE ${PORT}
 EXPOSE 8086

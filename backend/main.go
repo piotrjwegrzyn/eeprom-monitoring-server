@@ -1,44 +1,39 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"pi-wegrzyn/backend/cmds"
 	"pi-wegrzyn/utils"
 )
 
-const version string = "1.2"
+var version string
 
 func main() {
-
-	var configFilename = flag.String("config", "config.yaml", "Path to config file (YAML file)")
-	var info = flag.Bool("version", false, "Print version")
-
+	var configPath = flag.String("c", "config.yaml", "Path to config file (YAML file)")
+	var info = flag.Bool("v", false, "Print version")
 	flag.Parse()
 
+	utils.AdjustLogger("backend")
+
 	if *info {
-		fmt.Printf("Current version: %s\n", version)
+		log.Printf("Current version: %s\n", version)
 		os.Exit(0)
 	}
 
-	if _, err := os.Stat(*configFilename); errors.Is(err, os.ErrNotExist) {
-		log.Fatalf("Config file (%s) does not exist\n", *configFilename)
+	if err := utils.StatPaths([]string{*configPath}); err != nil {
+		log.Fatalf("Cannot use provided path: %v\n", err)
 	}
 
-	log.Println("Backend module started")
+	var cfg utils.Config
+	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
+		log.Fatalf("Cannot read configuration: %v\n", err)
+	}
 
-	config := utils.Config{}
-	utils.ReadConfig(*configFilename, &config)
-
-	log.Printf("Startup delay set for %d seconds\n", config.Delays.Startup)
-	time.Sleep(time.Duration(config.Delays.Startup) * time.Second)
-
-	if err := cmds.StartLoop(&config); err != nil {
+	server := cmds.NewServer(&cfg)
+	if err := server.Loop(); err != nil {
 		log.Fatalf("Server failed with: %s\n", err)
 	}
 }

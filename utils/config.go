@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
+	"log"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -8,7 +11,7 @@ import (
 
 type Delays struct {
 	Startup int `yaml:"startup"`
-	Query   int `yaml:"query"`
+	SQL     int `yaml:"sql"`
 	SSH     int `yaml:"ssh"`
 }
 
@@ -31,4 +34,19 @@ func ReadConfig(filename string, out any) error {
 	}
 
 	return nil
+}
+
+func StatPaths(paths []string) error {
+	for _, p := range paths {
+		if _, err := os.Stat(p); errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func AdjustLogger(prefix string) {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
+	log.SetPrefix(fmt.Sprintf("%10s: ", prefix))
 }

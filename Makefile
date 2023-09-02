@@ -4,7 +4,7 @@ all: backend frontend influxdb ems generator eeprom presenter
 
 .PHONY: backend
 backend:
-	go build -C backend -o ../bin/ems-backend
+	go build -C backend -o ../bin/ems-backend -ldflags "-X main.version=$(VERSION)"
 
 .PHONY: frontend
 frontend:

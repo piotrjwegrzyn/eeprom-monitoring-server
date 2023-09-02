@@ -29,13 +29,15 @@ func ipPattern(version int) string {
 
 type templates map[string]*template.Template
 
-func initTemplates(dir string) (templates map[string]*template.Template, err error) {
+func initTemplates(dir string) (map[string]*template.Template, error) {
+	templates := make(map[string]*template.Template)
 	functions := template.FuncMap{
 		"ToUpper":   strings.ToUpper,
 		"ToLower":   strings.ToLower,
 		"IPPattern": ipPattern,
 	}
 
+	var err error
 	for _, t := range []string{"index.html", "new.html", "signin.html"} {
 		templates[t], err = template.New(t).Funcs(functions).ParseFiles(path.Join(dir, t))
 		if err != nil {
@@ -43,5 +45,5 @@ func initTemplates(dir string) (templates map[string]*template.Template, err err
 		}
 	}
 
-	return
+	return templates, nil
 }

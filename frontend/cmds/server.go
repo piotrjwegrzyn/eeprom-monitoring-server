@@ -37,9 +37,6 @@ func NewServer(config *utils.Config, templatesDir string) (*server, error) {
 func (s *server) isSignedIn(w http.ResponseWriter, r *http.Request) bool {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
-		if err != http.ErrNoCookie {
-			log.Printf("Error while checking cookie: %v\n", err)
-		}
 		return false
 	}
 
@@ -120,8 +117,7 @@ func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = validateFormInput(&ipType, &hostname, &ip, &login)
-		if err != nil {
+		if err = validateFormInput(&ipType, &hostname, &ip, &login); err != nil {
 			log.Printf("Unsuccessful validation: %v\n", err)
 			s.templates["new.html"].Execute(w, NewEdit{"New", utils.Device{Hostname: hostname, IP: ip, Login: login}, ipType, prettifyError(err)})
 			return
@@ -141,8 +137,7 @@ func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
 		}
 		defer database.Close()
 
-		err = database.InsertDevice(utils.Device{Hostname: hostname, IP: ip, Login: login, Password: password, Key: key})
-		if err != nil {
+		if err = database.InsertDevice(utils.Device{Hostname: hostname, IP: ip, Login: login, Password: password, Key: key}); err != nil {
 			log.Printf("Database error: %v\n", err)
 		}
 
@@ -269,7 +264,7 @@ func (s *server) logOut(w http.ResponseWriter, r *http.Request) {
 func (s *server) protected(handler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !s.isSignedIn(w, r) {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
+			http.Redirect(w, r, "/signin", http.StatusSeeOther)
 			return
 		}
 
@@ -278,6 +273,8 @@ func (s *server) protected(handler func(w http.ResponseWriter, r *http.Request))
 }
 
 func (s *server) Start(staticDir string) error {
+	log.Println("Frontend module started")
+
 	http.HandleFunc("/signin", s.signInHtml)
 	http.HandleFunc("/", s.protected(s.indexHtml))
 	http.HandleFunc("/new", s.protected(s.newHtml))
@@ -306,7 +303,7 @@ func validateFormInput(ipType *int, hostname *string, ip *string, login *string)
 
 	if res, _ := regexp.MatchString(LoginPattern, *login); !res {
 		*login = ""
-		return errors.New("Wrong login")
+		return errors.New("wrong login")
 	}
 
 	if net.ParseIP(*ip) == nil {
@@ -320,6 +317,10 @@ func validateFormInput(ipType *int, hostname *string, ip *string, login *string)
 func retriveSSHKey(r *http.Request) (key []byte, err error) {
 	keyFile, keyFileHeader, err := r.FormFile("key")
 	if err != nil {
+		if err == http.ErrMissingFile {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 

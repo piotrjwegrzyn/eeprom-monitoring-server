@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -19,8 +18,10 @@ func main() {
 	info := flag.Bool("v", false, "Print version")
 	flag.Parse()
 
+	utils.AdjustLogger("generator")
+
 	if *info {
-		fmt.Printf("Current version: %s\n", version)
+		log.Printf("Current version: %s\n", version)
 		os.Exit(0)
 	}
 

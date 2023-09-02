@@ -21,59 +21,73 @@ func (m *MySQL) String() string {
 	return fmt.Sprintf("%s:%s@%s(%s)/%s", m.Username, m.Password, m.Protocol, m.Address, m.DBName)
 }
 
-type database struct {
+type Database struct {
 	*sql.DB
 }
 
-func (d *database) InsertDevice(device Device) error {
-	insert, err := d.Prepare("INSERT INTO devices(`hostname`, `ip`, `login`, `password`, `key`) VALUES(?,?,?,?,?)")
+type dbDevice interface {
+	GetDevice() Device
+}
+
+func (db *Database) InsertDevice(dev dbDevice) error {
+	d := dev.GetDevice()
+
+	insert, err := db.Prepare("INSERT INTO devices(`hostname`, `ip`, `login`, `password`, `key`) VALUES(?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
-	insert.Exec(device.Hostname, device.IP, device.Login, device.Password, device.Key)
-	log.Printf("Insert Device (%s) to database\n", device.Hostname)
 
+	if _, err := insert.Exec(d.Hostname, d.IP, d.Login, d.Password, d.Key); err != nil {
+		return err
+	}
+
+	log.Printf("Inserted Device (%s) to database\n", d.Hostname)
 	return nil
 }
 
-func (d *database) UpdateDevice(device Device) error {
-	update, err := d.Prepare("UPDATE devices SET `hostname`=?, `ip`=?, `login`=?, `password`=?, `key`=?, `status`=?, `connected`=? WHERE `id`=?")
+func (db *Database) UpdateDevice(dev dbDevice) error {
+	d := dev.GetDevice()
+
+	update, err := db.Prepare("UPDATE devices SET `hostname`=?, `ip`=?, `login`=?, `password`=?, `key`=?, `status`=?, `connected`=? WHERE `id`=?")
 	if err != nil {
 		return err
 	}
-	result, err := update.Exec(device.Hostname, device.IP, device.Login, device.Password, device.Key, device.Status, device.Connected, device.ID)
+	result, err := update.Exec(d.Hostname, d.IP, d.Login, d.Password, d.Key, d.Status, d.Connected, d.ID)
 	if err != nil {
 		return err
 	}
 
 	if affected, _ := result.RowsAffected(); affected == 1 {
-		log.Printf("Updated device with ID: %d\n", device.ID)
+		log.Printf("Updated device with ID: %d\n", d.ID)
 	} else if affected == 0 {
-		log.Printf("Nothing happen with update device with ID: %d (%d rows affected)\n", device.ID, affected)
+		log.Printf("Nothing happen with update device with ID: %d (%d rows affected)\n", d.ID, affected)
 	} else {
-		return fmt.Errorf("%d rows affected during update device with ID: %d", affected, device.ID)
+		return fmt.Errorf("%d rows affected during update device with ID: %d", affected, d.ID)
 	}
 
 	return nil
 }
 
-func (d *database) UpdateDeviceStatus(device Device) error {
-	currentDevice, err := d.GetDevice(device.ID)
+func (db *Database) UpdateDeviceStatus(dev dbDevice) error {
+	d := dev.GetDevice()
+
+	current, err := db.GetDevice(d.ID)
 	if err != nil {
 		return err
 	}
-	currentDevice.Status, currentDevice.Connected = device.Status, device.Connected
+	current.Status, current.Connected = d.Status, d.Connected
 
-	err = d.UpdateDevice(currentDevice)
+	err = db.UpdateDevice(current)
 	if err != nil {
 		return err
 	}
 
+	log.Printf("Updated device with ID: %d\n", current.ID)
 	return nil
 }
 
-func (d *database) DeleteDevice(id int) error {
-	delete, err := d.Prepare("DELETE FROM devices WHERE `id`=?")
+func (db *Database) DeleteDevice(id int) error {
+	delete, err := db.Prepare("DELETE FROM devices WHERE `id`=?")
 	if err != nil {
 		return err
 	}
@@ -94,8 +108,8 @@ func (d *database) DeleteDevice(id int) error {
 	return nil
 }
 
-func (d *database) GetDevice(id int) (Device, error) {
-	devices, err := d.GetDevices()
+func (db *Database) GetDevice(id int) (Device, error) {
+	devices, err := db.GetDevices()
 	if err != nil {
 		return Device{}, err
 	}
@@ -109,8 +123,8 @@ func (d *database) GetDevice(id int) (Device, error) {
 	return Device{}, fmt.Errorf("no device with id: %d", id)
 }
 
-func (d *database) GetDevices() (devices []Device, err error) {
-	output, err := d.Query("SELECT * FROM devices;")
+func (db *Database) GetDevices() (devices []Device, err error) {
+	output, err := db.Query("SELECT * FROM devices;")
 	if err != nil {
 		return nil, err
 	}
@@ -127,10 +141,11 @@ func (d *database) GetDevices() (devices []Device, err error) {
 		devices = append(devices, device)
 	}
 
+	log.Printf("Got %d devices from database\n", len(devices))
 	return
 }
 
-func ConnectToDatabase(config *MySQL) (db database, err error) {
+func ConnectToDatabase(config *MySQL) (db Database, err error) {
 	opened, err := sql.Open("mysql", config.String())
 	if err != nil {
 		return
@@ -141,5 +156,5 @@ func ConnectToDatabase(config *MySQL) (db database, err error) {
 	}
 
 	log.Println("Connected to database")
-	return database{opened}, nil
+	return Database{opened}, nil
 }
