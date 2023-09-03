@@ -21,7 +21,9 @@ RUN echo "export EP_DIR=${EP_DIR}" >> /etc/profile && \
 RUN apt-get update && apt-get install -y iproute2 openssh-server xxd
 RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
-    echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config
+    echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config && \
+    mkdir /root/.ssh/ && \
+    echo "EP_DIR=$EP_DIR" >> /root/.ssh/environment
 
 # Setting up program
 COPY presenter/present.sh presenter/update.sh ${EP_DIR}

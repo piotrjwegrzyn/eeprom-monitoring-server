@@ -7,7 +7,7 @@ const (
 	STATUS_OK
 	STATUS_ERROR_SSH
 	STATUS_ERROR_KEYFILE
-	STATUS_UNKNOWN
+	STATUS_WARNING
 )
 
 type Device struct {
@@ -35,6 +35,8 @@ func (d *Device) StatusConnected() string {
 		return fmt.Sprintf("SSH SESSION ERROR (last connection: %s)", d.Connected)
 	case STATUS_ERROR_KEYFILE:
 		return fmt.Sprintf("KEYFILE ERROR (last connection: %s)", d.Connected)
+	case STATUS_WARNING:
+		return fmt.Sprintf("SOME ERRORS OCCURRED (last connection: %s)", d.Connected)
 	default:
 		return fmt.Sprintf("STATUS UNKNOWN (last connection: %s)", d.Connected)
 	}

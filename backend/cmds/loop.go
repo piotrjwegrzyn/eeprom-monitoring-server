@@ -61,32 +61,33 @@ func (s *server) prepareRemotes() error {
 
 		s.remotes = append(s.remotes, c)
 
-		timeLimit := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL-0.5))
+		timeLimit := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL-s.config.Delays.SSH))
 		timeSleep := time.Duration(s.config.Delays.SSH) * time.Second
 
 		go c.Monitor(&s.config.Influx, timeLimit, timeSleep)
 	}
 
-	log.Printf("Prepared %d signallers\n", len(s.remotes))
+	log.Printf("Prepared %d remote handlers\n", len(s.remotes))
 	return nil
 }
 
 func (s *server) checkSignalsLoop() (err error) {
-	for _, c := range s.remotes {
+	for _, r := range s.remotes {
 		select {
-		case out := <-c.Out:
-			log.Printf("Stopped goroutine (device ID: %d)\n", c.ID)
-			c.Status = out
-			if out == utils.STATUS_OK {
-				c.Connected = time.Now().Format("2006-01-02 15:04:05")
+		case got := <-r.ExitSignal:
+			log.Printf("goroutine ended with status: %d (device ID: %d)\n", got, r.ID)
+			r.Status = got
+			if got == utils.STATUS_OK {
+				r.Connected = time.Now().Format("2006-01-02 15:04:05")
 			}
 		default:
-			log.Printf("Undefined state of goroutine (device ID: %d)\n", c.ID)
-			c.Status = utils.STATUS_UNKNOWN
+			log.Printf("No exit of goroutine (device ID: %d)\n", r.ID)
+			r.Status = utils.STATUS_OK
+			r.Connected = time.Now().Format("2006-01-02 15:04:05")
 		}
 
-		if err2 := s.database.UpdateDeviceStatus(*c); err2 != nil {
-			errors.Join(err, fmt.Errorf("error while updating device: %v (device ID: %d)", err2, c.ID))
+		if err2 := s.database.UpdateDeviceStatus(*r); err2 != nil {
+			errors.Join(err, fmt.Errorf("error while updating device: %v (device ID: %d)", err2, r.ID))
 		}
 	}
 

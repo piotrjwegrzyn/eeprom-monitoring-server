@@ -6,7 +6,6 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
 ARG CONFIG=./testdata/ems.yaml
 ARG MYSQL_USER=http
 ARG MYSQL_PASSWORD=http-password
-ARG DBNAME=ems
 ARG PORT=80
 
 COPY ./bin/ems-frontend /usr/bin/ems-frontend
@@ -20,8 +19,8 @@ COPY ./bin/influxc /usr/bin/influx
 
 RUN /usr/sbin/mysqld & sleep 5 && \
     mysql -u root -e "CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';" && \
-    mysql -u root -e "CREATE DATABASE \`${DBNAME}\`" && \
-    mysql -u root -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* TO '${MYSQL_USER}'@'localhost';" && \
+    mysql -u root -e "CREATE DATABASE \`$(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}')\`" && \
+    mysql -u root -e "GRANT ALL PRIVILEGES ON \`$(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}')\`.* TO '${MYSQL_USER}'@'localhost';" && \
     mysql -u root -e "FLUSH PRIVILEGES;" && \
     mysql $(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}') < /tmp/database.dump
 

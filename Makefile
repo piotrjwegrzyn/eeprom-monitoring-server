@@ -1,6 +1,6 @@
 VERSION = latest-$(shell git log --pretty=format:'%h' -n 1)
 
-all: backend frontend influxdb ems generator eeprom presenter
+all: ems generator
 
 .PHONY: backend
 backend:
@@ -18,27 +18,44 @@ influxdb:
 	wget -q -O - $(shell echo $(LATEST) | awk '{printf $$2}') | tar -zxv ./influx --transform 's/\.\/influx/bin\/influxc/'
 
 .PHONY: ems
-ems:
+ems: backend frontend influxdb ems-build
+
+.PHONY: ems-build
+ems-build:
 	docker build --no-cache \
 	--file Dockerfile \
-	--tag pi-wegrzyn/ems:$(VERSION) .
+	--tag pi-wegrzyn/ems:$(VERSION) \
+	--tag pi-wegrzyn/ems:latest \
+	--build-arg CONFIG=./testdata/ems.yaml .
+
+.PHONY: ems-cached
+ems-build-cached:
+	docker build \
+	--file Dockerfile \
+	--tag pi-wegrzyn/ems:$(VERSION) \
+	--tag pi-wegrzyn/ems:latest \
+	--build-arg CONFIG=./testdata/ems.yaml .
 
 .PHONY: generator
 generator:
 	go build -C generator -o ../bin/eeprom-generator -ldflags "-X main.version=$(VERSION)"
-
-.PHONY: eeprom
-eeprom:
-	./bin/eeprom-generator -c ./testdata/generator.yaml -o ./bin/eeprom
 
 .PHONY: presenter
 presenter:
 	docker build --no-cache \
 	--file presenter/Dockerfile \
 	--tag pi-wegrzyn/ep:$(VERSION) \
+	--tag pi-wegrzyn/ep:latest \
 	--build-arg EEPROM_ITER=300 \
 	--build-arg SLEEP_TIME=1 \
 	--build-arg EEPROM_SRC=bin/eeprom/ .
+
+.PHONY: sample-presenter
+sample-presenter: generator sample-eeprom-files presenter
+
+.PHONY: sample-eeprom-files
+sample-eeprom-files:
+	./bin/eeprom-generator -c ./testdata/generator.yaml -o ./bin/eeprom
 
 .PHONY: clean
 clean:
