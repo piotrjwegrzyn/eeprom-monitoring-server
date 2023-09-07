@@ -1,0 +1,28 @@
+---
+# Web credentials (multiple entries only for devices' config page)
+users:
+  login: password
+
+mysql:
+  username: http
+  password: http-password
+  protocol: tcp
+  address: 127.0.0.1:3306
+  dbname: ems
+
+# Port for devices' config page
+port: 80
+
+# Time steps for loop
+delays: # in seconds
+  startup: 10.0
+  sql: 30.0 # syncing with database
+  ssh: 3.0 # polling devices over SSH
+
+influx:
+  bucket: ems
+  org: eeprom-monitoring-server
+  token: v3rY-d1ff1cUlT-t0k3n
+  url: http://localhost:8086
+  retention: 24h
+...

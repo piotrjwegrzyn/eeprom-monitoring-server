@@ -1,5 +1,3 @@
-frontend/frontend
-backend/backend
-config/config.yaml
-Dockerfile_v*
-influx/
+.vscode
+/bin/
+*.out
