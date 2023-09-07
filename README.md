@@ -40,7 +40,7 @@ make
 
 To build generic EP (with scenario from `testdata/generator.yaml` file) run:
 ```
-make sample-eeprom-presenter
+make sample-presenter
 ```
 
 ## EEPROM Monitoring Server
@@ -87,7 +87,7 @@ make presenter
 ```
 The output container will be named as `pi-wegrzyn/ep:<VERSION>`.
 
-To manually run EP container:
+To run locally built EP container:
 ```
 docker run -ti pi-wegrzyn/ep:latest
 ```
@@ -122,7 +122,7 @@ The output file will be located in `bin/eeprom-generator`.
 ### Usage
 Type in terminal:
 ```
-./eeprom-generator -c <CONFIG_FILE.yaml> -o <OUTPUT_PATH>
+./bin/eeprom-generator -c <CONFIG_FILE.yaml> -o <OUTPUT_PATH>
 ```
 
 ### Config file

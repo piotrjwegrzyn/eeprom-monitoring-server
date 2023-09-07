@@ -61,9 +61,9 @@ func (s *server) signInHtml(w http.ResponseWriter, r *http.Request) {
 		login := r.FormValue("login")
 		password := r.FormValue("password")
 
-		if res, _ := regexp.MatchString("^([-_.a-zA-Z0-9]){2,32}$", login); res && ((s.config).Users)[login] == password {
+		if res, err := regexp.MatchString("^([-_.a-zA-Z0-9]){2,32}$", login); err == nil && res && s.config.Users[login] == password {
 			s.cookies.createCookie(w, login)
-			log.Printf("User %s signed in successfully (cookie: %s)\n", login, s.cookies[login])
+			log.Printf("User %s signed in successfully\n", login)
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
@@ -301,7 +301,7 @@ func validateFormInput(ipType *int, hostname *string, ip *string, login *string)
 		return errors.New("empty fields")
 	}
 
-	if res, _ := regexp.MatchString(LoginPattern, *login); !res {
+	if res, err := regexp.MatchString(LoginPattern, *login); err != nil || !res {
 		*login = ""
 		return errors.New("wrong login")
 	}

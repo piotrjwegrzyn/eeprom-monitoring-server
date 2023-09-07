@@ -12,7 +12,3 @@ then
 fi
 
 xxd -p -c 16 $EP_DIR/interfaces/$1 2> /dev/null
-# Alternatively:
-# xxd $EP_DIR/interfaces/$1
-# hexdump -v -C $EP_DIR/interfaces/$1
-# hexdump -v $EP_DIR/interfaces/$1

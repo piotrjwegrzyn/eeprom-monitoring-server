@@ -96,7 +96,6 @@ func (d *remoteDevice) auth() ([]ssh.AuthMethod, error) {
 
 	signer, err := ssh.ParsePrivateKey(d.Key)
 	if err != nil {
-		log.Printf("Unable to parse private key: %v (device ID: %d)\n", err, d.ID)
 		return nil, err
 	}
 
@@ -147,14 +146,12 @@ func (d *remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string
 
 		got, err2 := session.CombinedOutput(fmt.Sprintf(CMD_SHOW_EEPROM, inf))
 		if err2 != nil {
-			fmt.Println("error2, interface: ", inf)
 			err = errors.Join(err, fmt.Errorf("%v (interface: %s)\n", err2, inf))
 			continue
 		}
 
 		interfaceData, err2 := d.processData(got)
 		if err2 != nil {
-			fmt.Println("error3, interface: ", inf)
 			err = errors.Join(err, fmt.Errorf("%v (interface: %s)\n", err2, inf))
 			continue
 		}

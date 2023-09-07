@@ -13,10 +13,11 @@ type cookie struct {
 	Expires time.Time
 }
 
-func (s cookie) isExpired() bool {
-	return s.Expires.Before(time.Now())
+func (ac cookie) isExpired() bool {
+	return ac.Expires.Before(time.Now())
 }
 
+// cookies key represents a session token
 type cookies map[string]cookie
 
 func (ac cookies) createCookie(w http.ResponseWriter, username string) {
@@ -34,7 +35,7 @@ func (ac cookies) createCookie(w http.ResponseWriter, username string) {
 		Expires: expiration,
 	})
 
-	log.Printf("Created cookie for user: %x\n", username)
+	log.Printf("Created cookie for user: %s (cookie expires on: %s)\n", username, expiration.Format(time.RFC3339))
 }
 
 func (ac cookies) deleteCookie(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +48,8 @@ func (ac cookies) deleteCookie(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	log.Printf("Deleted cookie for user: %s\n", ac[cookie.Value].Login)
+
+	log.Printf("Deleting cookie for user: %s\n", ac[cookie.Value].Login)
 	delete(ac, cookie.Value)
 
 	http.SetCookie(w, &http.Cookie{
