@@ -12,9 +12,10 @@ frontend:
 
 .PHONY: influxdb
 influxdb:
-	$(eval LATEST=$(shell wget -q -O- https://portal.influxdata.com/downloads/ | grep "wget https://dl.influxdata.com/influxdb/releases/influxdb2" | grep "linux-amd64" | awk '{printf $$2 "\n"}'))
+	$(eval LATEST=$(shell wget -q -O- https://www.influxdata.com/downloads/ | grep ">wget https://dl.influxdata.com/influxdb/releases/influxdb2" | grep "linux" | grep "amd64" | awk '{printf $$2 "\n"}'))
+	$(eval INFLUX_VERSION=$(shell echo $(LATEST) | awk '{printf $$1}' | grep -o -E "[0-9]+\.[0-9]+\.[0-9]+"))
 
-	wget -q -O - $(shell echo $(LATEST) | awk '{printf $$1}') | tar -zxv influxdb2_linux_amd64/influxd --transform 's/influxdb2_linux_amd64\/influxd/bin\/influxd/'
+	wget -q -O - $(shell echo $(LATEST) | awk '{printf $$1}') | tar -zxv influxdb2-$(shell echo $(INFLUX_VERSION))/usr/bin/influxd --transform 's/influxdb2-$(shell echo $(INFLUX_VERSION))\/usr\/bin\/influxd/bin\/influxd/'
 	wget -q -O - $(shell echo $(LATEST) | awk '{printf $$2}') | tar -zxv ./influx --transform 's/\.\/influx/bin\/influxc/'
 
 .PHONY: ems
