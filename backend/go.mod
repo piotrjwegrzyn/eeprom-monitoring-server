@@ -1,7 +1,7 @@
 module pi-wegrzyn/backend
 
-go 1.21.5
+go 1.22.3
 
-require golang.org/x/crypto v0.17.0
+require golang.org/x/crypto v0.23.0
 
-require golang.org/x/sys v0.15.0 // indirect
+require golang.org/x/sys v0.20.0 // indirect
