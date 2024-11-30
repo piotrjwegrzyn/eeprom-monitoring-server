@@ -1,0 +1,20 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+profiles:
+  - name: database
+    activation:
+      - env: DATABASE=1
+        kubeContext: minikube
+    deploy:
+      helm:
+        releases:
+          - name: ems-db
+            remoteChart: oci://registry-1.docker.io/bitnamicharts/mysql
+            wait: true
+            setValueTemplates:
+              auth.rootPassword: root
+    portForward:
+      - resourceName: ems-db-mysql
+        resourceType: service
+        address: 127.0.0.1
+        port: 3306

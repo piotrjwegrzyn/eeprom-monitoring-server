@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"path"
-	"pi-wegrzyn/utils"
+	"pi-wegrzyn/storage"
 	"strings"
 	"text/template"
 )
@@ -15,7 +15,7 @@ const (
 
 type NewEdit struct {
 	Action       string
-	Device       utils.Device
+	Device       storage.Device
 	IPVersion    int
 	ErrorMessage string
 }

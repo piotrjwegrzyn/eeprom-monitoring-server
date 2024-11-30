@@ -3,12 +3,12 @@
 users:
   login: password
 
-mysql:
-  username: http
+database:
+  name: ems
+  user: http
   password: http-password
-  protocol: tcp
-  address: 127.0.0.1:3306
-  dbname: ems
+  host: 127.0.0.1
+  port: 3306
 
 # Port for devices' config page
 port: 80

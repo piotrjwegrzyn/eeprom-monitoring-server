@@ -19,10 +19,10 @@ COPY ./bin/influxc /usr/bin/influx
 
 RUN /usr/sbin/mysqld & sleep 5 && \
     mysql -u root -e "CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';" && \
-    mysql -u root -e "CREATE DATABASE \`$(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}')\`" && \
-    mysql -u root -e "GRANT ALL PRIVILEGES ON \`$(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}')\`.* TO '${MYSQL_USER}'@'localhost';" && \
+    mysql -u root -e "CREATE DATABASE \`$(grep "name" /etc/ems/config.yaml | awk '{printf $2}')\`" && \
+    mysql -u root -e "GRANT ALL PRIVILEGES ON \`$(grep "name" /etc/ems/config.yaml | awk '{printf $2}')\`.* TO '${MYSQL_USER}'@'localhost';" && \
     mysql -u root -e "FLUSH PRIVILEGES;" && \
-    mysql $(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}') < /tmp/database.dump
+    mysql $(grep "name" /etc/ems/config.yaml | awk '{printf $2}') < /tmp/database.dump
 
 RUN /usr/bin/influxd & sleep 5 && \
     /usr/bin/influx setup \

@@ -22,7 +22,7 @@
             {{range .}}
             <div class="device">
                 <span style="grid-area: hostname; font-size: x-large;">{{.Hostname}}</span>
-                <span style="grid-area: login-ip;" class="login-ip">{{.Login}}@{{.IP}}</span>
+                <span style="grid-area: login-ip;" class="login-ip">{{.Login}}@{{.IPAddress}}</span>
                 <form class="button-holder" action="/edit" method="get">
                     <button style="grid-area: edit;" name="edit-id" value="{{.ID}}">EDIT</button>
                 </form>

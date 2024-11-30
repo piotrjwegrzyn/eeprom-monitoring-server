@@ -2,39 +2,43 @@ package cmds
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"pi-wegrzyn/storage"
 	"pi-wegrzyn/utils"
 )
 
 type server struct {
 	config    utils.Config
+	db        *storage.DB
 	templates templates
 	cookies   cookies
 }
 
-func NewServer(config *utils.Config, templatesDir string) (*server, error) {
+func NewServer(config *utils.Config, templatesDir string, db *storage.DB) (*server, error) {
 	templates, err := initTemplates(templatesDir)
 	if err != nil {
 		return nil, err
 	}
 
 	return &server{
-		cookies:   make(map[string]cookie),
 		config:    *config,
+		db:        db,
 		templates: templates,
+		cookies:   make(map[string]cookie),
 	}, nil
 }
 
-func (s *server) isSignedIn(w http.ResponseWriter, r *http.Request) bool {
+func (s *server) isSignedIn(r *http.Request) bool {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		return false
@@ -50,20 +54,20 @@ func (s *server) isSignedIn(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func (s *server) signInHtml(w http.ResponseWriter, r *http.Request) {
-	if s.isSignedIn(w, r) {
+	if s.isSignedIn(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	log.Printf("%s%s (%s / %s)\n", r.Host, r.URL, r.Method, r.Proto)
+	slog.InfoContext(r.Context(), fmt.Sprintf("%s%s (%s / %s)", r.Host, r.URL, r.Method, r.Proto))
 
 	if r.Method == http.MethodPost {
 		login := r.FormValue("login")
 		password := r.FormValue("password")
 
 		if res, err := regexp.MatchString("^([-_.a-zA-Z0-9]){2,32}$", login); err == nil && res && s.config.Users[login] == password {
-			s.cookies.createCookie(w, login)
-			log.Printf("User %s signed in successfully\n", login)
+			s.cookies.createCookie(r.Context(), w, login)
+			slog.InfoContext(r.Context(), "user signed in successfully", slog.Any("username", login))
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
@@ -81,28 +85,20 @@ func (s *server) indexHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%s%s (%s / %s)\n", r.Host, r.URL, r.Method, r.Proto)
+	slog.InfoContext(r.Context(), fmt.Sprintf("%s%s (%s / %s)", r.Host, r.URL, r.Method, r.Proto))
 
-	database, err := utils.ConnectToDatabase(&s.config.MySQL)
+	devices, err := s.db.Devices(context.Background())
 	if err != nil {
-		log.Printf("Error while opening database: %v\n", err)
-		s.templates["index.html"].Execute(w, nil)
-		return
-	}
-
-	devices, err := database.GetDevices()
-	if err != nil {
-		log.Printf("Database error: %v\n", err)
+		slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		s.templates["index.html"].Execute(w, nil)
 		return
 	}
 
 	s.templates["index.html"].Execute(w, devices)
-	defer database.Close()
 }
 
 func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s%s (%s / %s)\n", r.Host, r.URL, r.Method, r.Proto)
+	slog.InfoContext(r.Context(), fmt.Sprintf("%s%s (%s / %s)", r.Host, r.URL, r.Method, r.Proto))
 
 	if r.Method == http.MethodPost {
 		hostname := strings.TrimSpace(r.FormValue("hostname"))
@@ -112,69 +108,53 @@ func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
 
 		ipType, err := strconv.Atoi(strings.TrimSpace(r.FormValue("ip-type")))
 		if err != nil {
-			log.Printf("Error while parsing IP type: %v", err)
+			slog.ErrorContext(r.Context(), "error while parsing IP type", slog.Any("error", err))
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
 		if err = validateFormInput(&ipType, &hostname, &ip, &login); err != nil {
-			log.Printf("Unsuccessful validation: %v\n", err)
-			s.templates["new.html"].Execute(w, NewEdit{"New", utils.Device{Hostname: hostname, IP: ip, Login: login}, ipType, prettifyError(err)})
+			slog.ErrorContext(r.Context(), "validation error", slog.Any("error", err))
+			s.templates["new.html"].Execute(w, NewEdit{"New", storage.Device{Hostname: hostname, IPAddress: ip, Login: login}, ipType, prettifyError(err)})
 			return
 		}
 
-		key, err := retriveSSHKey(r)
+		key, err := retrieveSSHKey(r)
 		if err != nil {
-			s.templates["new.html"].Execute(w, NewEdit{"New", utils.Device{Hostname: hostname, IP: ip, Login: login}, ipType, prettifyError(err)})
+			s.templates["new.html"].Execute(w, NewEdit{"New", storage.Device{Hostname: hostname, IPAddress: ip, Login: login}, ipType, prettifyError(err)})
 			return
 		}
 
-		database, err := utils.ConnectToDatabase(&s.config.MySQL)
-		if err != nil {
-			log.Printf("Error while opening database: %v\n", err)
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
-		}
-		defer database.Close()
-
-		if err = database.InsertDevice(utils.Device{Hostname: hostname, IP: ip, Login: login, Password: password, Key: key}); err != nil {
-			log.Printf("Database error: %v\n", err)
+		if err = s.db.CreateDevice(context.Background(), storage.Device{Hostname: hostname, IPAddress: ip, Login: login, Password: password, Keyfile: key}); err != nil {
+			slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		}
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	s.templates["new.html"].Execute(w, NewEdit{"New", utils.Device{}, 4, ""})
+	s.templates["new.html"].Execute(w, NewEdit{"New", storage.Device{}, 4, ""})
 }
 
 func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s%s (%s / %s)\n", r.Host, r.URL, r.Method, r.Proto)
+	slog.InfoContext(r.Context(), fmt.Sprintf("%s%s (%s / %s)", r.Host, r.URL, r.Method, r.Proto))
 
 	id, err := strconv.Atoi(strings.TrimSpace(r.FormValue("edit-id")))
 	if err != nil {
-		log.Printf("Error while parsing device ID: %v\n", err)
+		slog.ErrorContext(r.Context(), "wrong device ID provided", slog.Any("deviceID", r.FormValue("edit-id")), slog.Any("error", err))
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	database, err := utils.ConnectToDatabase(&s.config.MySQL)
+	device, err := s.db.Device(context.Background(), uint(id))
 	if err != nil {
-		log.Printf("Error while opening database: %v\n", err)
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-	defer database.Close()
-
-	device, err := database.GetDevice(id)
-	if err != nil {
-		log.Printf("Database error: %v\n", err)
+		slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	var deviceIpType int
-	if net.ParseIP(device.IP).To4() != nil {
+	if net.ParseIP(device.IPAddress).To4() != nil {
 		deviceIpType = 4
 	} else {
 		deviceIpType = 6
@@ -187,39 +167,39 @@ func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
 
 		ipType, err := strconv.Atoi(strings.TrimSpace(r.FormValue("ip-type")))
 		if err != nil {
-			log.Printf("Error while parsing IP type: %v\n", err)
+			slog.ErrorContext(r.Context(), "error while parsing IP type", slog.Any("error", err))
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
 		err = validateFormInput(&ipType, &hostname, &ip, &login)
 		if err != nil {
-			log.Printf("Unsuccessful validation: %v\n", err)
+			slog.ErrorContext(r.Context(), "validation error", slog.Any("error", err))
 			s.templates["new.html"].Execute(w, NewEdit{"Edit", device, deviceIpType, prettifyError(err)})
 			return
 		}
 
-		newKey, err := retriveSSHKey(r)
+		newKey, err := retrieveSSHKey(r)
 		if err != nil {
-			log.Printf("Error occurred while retriving SSH key: %v\n", err)
+			slog.InfoContext(r.Context(), "error occurred while retrieving SSH key", slog.Any("error", err))
 			s.templates["new.html"].Execute(w, NewEdit{"Edit", device, deviceIpType, prettifyError(err)})
 			return
 		}
 
 		if len(newKey) > 0 {
-			device.Key = newKey
+			device.Keyfile = newKey
 		} else if r.FormValue("key-clear") != "" {
-			device.Key = []byte{}
+			device.Keyfile = []byte{}
 		}
 
 		if strings.TrimSpace(r.FormValue("password-clear")) != "" {
 			device.Password = r.FormValue("password")
 		}
 
-		device.Hostname, device.IP, device.Login = hostname, ip, login
+		device.Hostname, device.IPAddress, device.Login = hostname, ip, login
 
-		if err := database.UpdateDevice(device); err != nil {
-			log.Printf("Database error: %v\n", err)
+		if err := s.db.UpdateDevice(context.Background(), device); err != nil {
+			slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		}
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -230,26 +210,18 @@ func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) delete(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s%s (%s / %s)\n", r.Host, r.URL, r.Method, r.Proto)
+	slog.InfoContext(r.Context(), fmt.Sprintf("%s%s (%s / %s)", r.Host, r.URL, r.Method, r.Proto))
 
 	if r.Method == http.MethodPost {
 		id, err := strconv.Atoi(strings.TrimSpace(r.FormValue("delete-id")))
 		if err != nil {
-			log.Printf("Wrong device ID was provided (%s)\n", r.FormValue("delete-id"))
+			slog.ErrorContext(r.Context(), "wrong device ID provided", slog.Any("deviceID", r.FormValue("delete-id")), slog.Any("error", err))
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
-		database, err := utils.ConnectToDatabase(&s.config.MySQL)
-		if err != nil {
-			log.Printf("Error while opening database: %v\n", err)
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
-		}
-		defer database.Close()
-
-		if err = database.DeleteDevice(id); err != nil {
-			log.Printf("Database error: %v\n", err)
+		if err = s.db.DeleteDevice(context.Background(), uint(id)); err != nil {
+			slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		}
 	}
 
@@ -257,13 +229,13 @@ func (s *server) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) logOut(w http.ResponseWriter, r *http.Request) {
-	s.cookies.deleteCookie(w, r)
+	s.cookies.deleteCookie(r.Context(), w, r)
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
 
 func (s *server) protected(handler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !s.isSignedIn(w, r) {
+		if !s.isSignedIn(r) {
 			http.Redirect(w, r, "/signin", http.StatusSeeOther)
 			return
 		}
@@ -272,8 +244,8 @@ func (s *server) protected(handler func(w http.ResponseWriter, r *http.Request))
 	}
 }
 
-func (s *server) Start(staticDir string) error {
-	log.Println("Frontend module started")
+func (s *server) Start(ctx context.Context, staticDir string) error {
+	slog.InfoContext(ctx, "Frontend module started")
 
 	http.HandleFunc("/signin", s.signInHtml)
 	http.HandleFunc("/", s.protected(s.indexHtml))
@@ -283,7 +255,7 @@ func (s *server) Start(staticDir string) error {
 	http.HandleFunc("/logout", s.logOut)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
-	log.Printf("Serving HTTP on 0.0.0.0 port %[1]d (http://0.0.0.0:%[1]d/) ...\n", s.config.Port)
+	slog.InfoContext(ctx, fmt.Sprintf("Serving HTTP on 0.0.0.0 port %[1]d (http://0.0.0.0:%[1]d/) ...\n", s.config.Port))
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", s.config.Port), nil)
 }
@@ -314,7 +286,7 @@ func validateFormInput(ipType *int, hostname *string, ip *string, login *string)
 	return nil
 }
 
-func retriveSSHKey(r *http.Request) (key []byte, err error) {
+func retrieveSSHKey(r *http.Request) (key []byte, err error) {
 	keyFile, keyFileHeader, err := r.FormFile("key")
 	if err != nil {
 		if err == http.ErrMissingFile {

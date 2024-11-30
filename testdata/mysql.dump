@@ -21,10 +21,10 @@ CREATE TABLE `devices` (
   `hostname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `ip` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `login` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `key` blob DEFAULT NULL,
-  `connected` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Never',
-  `status` int(11) NOT NULL DEFAULT -1,
+  `passwd` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `keyfile` blob DEFAULT NULL,
+  `connected` DATETIME COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_status` int(11) NOT NULL DEFAULT -1,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

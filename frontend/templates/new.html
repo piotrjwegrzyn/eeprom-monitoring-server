@@ -48,7 +48,7 @@
                     <input type="text"
                         id="ip"
                         name="ip"
-                        value="{{.Device.IP}}"
+                        value="{{.Device.IPAddress}}"
                         pattern="{{.IPVersion | IPPattern}}"
                         placeholder="type here" required>
                 </div>
@@ -78,7 +78,7 @@
                         placeholder="type here">
                 </div>
                 <div class="label">KEY</div>
-                {{if ne (len .Device.Key) 0}}<div class="input-holder">
+                {{if ne (len .Device.Keyfile) 0}}<div class="input-holder">
                     <div class="radiocheck-select">
                         <input style="outline: none !important; min-width: 30px;"
                             type="checkbox"
@@ -90,14 +90,14 @@
                 <div class="input-holder">
                     <input type="button"
                         id="key-selector"
-                        {{if eq (len .Device.Key) 0}}value="SELECT OPTIONAL KEY"
+                        {{if eq (len .Device.Keyfile) 0}}value="SELECT OPTIONAL KEY"
                         {{else}}value="SELECT NEW KEY (OVERWRITE)"{{end}}
                         onclick="document.getElementById('key').click();">
                     <input style="display: none;"
                         id="key"
                         type="file"
                         name="key"
-                        {{if eq (len .Device.Key) 0}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT OPTIONAL KEY'">
+                        {{if eq (len .Device.Keyfile) 0}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT OPTIONAL KEY'">
                         {{else}}onchange="document.getElementById('key-selector').value = this.files?.[0]?.name ?? 'SELECT NEW KEY (OVERWRITE)'">{{end}}
                     <input style="display: none;"
                         type="text"

@@ -1,3 +1,3 @@
 module pi-wegrzyn/generator
 
-go 1.22.3
+go 1.23.3
