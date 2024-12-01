@@ -8,6 +8,7 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/kelseyhightower/envconfig"
 
 	"pi-wegrzyn/frontend/cmds"
 	"pi-wegrzyn/storage"
@@ -37,7 +38,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn, closeConn, err := connectToDatabase(cfg.Database)
+	var dbCfg storage.Config
+	if err := envconfig.Process("", &dbCfg); err != nil {
+		slog.ErrorContext(appCtx, "cannot read database configuration", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	conn, closeConn, err := connectToDatabase(dbCfg)
 	if err != nil {
 		slog.Error("cannot connect to database", slog.Any("error", err))
 		os.Exit(1)

@@ -44,7 +44,7 @@ func (s *server) Loop(ctx context.Context) error {
 }
 
 func (s *server) prepareRemotes(ctx context.Context) error {
-	devices, err := s.db.Devices(context.Background())
+	devices, err := s.db.Devices(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (s *server) checkSignalsLoop(ctx context.Context) (err error) {
 			r.Connected = time.Now()
 		}
 
-		if err2 := s.db.UpdateDeviceStatus(context.Background(), r.Device); err2 != nil {
+		if err2 := s.db.UpdateDeviceStatus(ctx, r.Device); err2 != nil {
 			errors.Join(err, fmt.Errorf("error while updating device: %v (device ID: %d)", err2, r.ID))
 		}
 	}

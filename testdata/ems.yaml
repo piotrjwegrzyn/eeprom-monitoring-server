@@ -3,13 +3,6 @@
 users:
   login: password
 
-database:
-  name: ems
-  user: http
-  password: http-password
-  host: 127.0.0.1
-  port: 3306
-
 # Port for devices' config page
 port: 80
 

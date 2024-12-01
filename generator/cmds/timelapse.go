@@ -25,7 +25,7 @@ func generateSteps(steps []Step, duration int) ([]float64, error) {
 	}
 
 	if len(newSteps) != duration {
-		return nil, fmt.Errorf("mismatch between Duration (%d) and steps durations (%d) near %f endval\n", duration, len(newSteps), newSteps[len(newSteps)-1])
+		return nil, fmt.Errorf("mismatch between Duration (%d) and steps durations (%d) near %f endval", duration, len(newSteps), newSteps[len(newSteps)-1])
 	}
 
 	return newSteps, nil

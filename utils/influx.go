@@ -12,7 +12,7 @@ type InterfaceData struct {
 	Voltage     float64
 	TxPower     float64
 	RxPower     float64
-	Osnr        float64
+	OSNR        float64
 }
 
 type Influx struct {
@@ -35,7 +35,7 @@ func (i *Influx) Insert(hostname string, iface string, data *InterfaceData) {
 			"vcc":    math.Round(data.Voltage*100) / 100,
 			"tx_pwr": math.Round(data.TxPower*100) / 100,
 			"rx_pwr": math.Round(data.RxPower*100) / 100,
-			"osnr":   math.Round(data.Osnr*100) / 100,
+			"osnr":   math.Round(data.OSNR*100) / 100,
 		},
 		time.Now(),
 	)

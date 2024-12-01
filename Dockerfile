@@ -1,11 +1,16 @@
-FROM ubuntu:latest
+FROM golang:1.23.3-bookworm
 LABEL VERSION=latest
 
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mariadb-server
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CONFIG=./testdata/ems.yaml
-ARG MYSQL_USER=http
-ARG MYSQL_PASSWORD=http-password
+ARG DB_NAME=mysql
+ARG DB_USER=http
+ARG DB_PASSWORD=http-password
+ARG DB_HOST=localhost
+ARG DB_PORT=3306
 ARG PORT=80
 
 COPY ./bin/ems-frontend /usr/bin/ems-frontend
@@ -16,13 +21,12 @@ COPY ${CONFIG} /etc/ems/config.yaml
 COPY ./testdata/mysql.dump /tmp/database.dump
 COPY ./bin/influxd /usr/bin/influxd
 COPY ./bin/influxc /usr/bin/influx
+COPY ./storage/sqlc/migrations/ /etc/ems/migrations/
 
-RUN /usr/sbin/mysqld & sleep 5 && \
-    mysql -u root -e "CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';" && \
-    mysql -u root -e "CREATE DATABASE \`$(grep "name" /etc/ems/config.yaml | awk '{printf $2}')\`" && \
-    mysql -u root -e "GRANT ALL PRIVILEGES ON \`$(grep "name" /etc/ems/config.yaml | awk '{printf $2}')\`.* TO '${MYSQL_USER}'@'localhost';" && \
-    mysql -u root -e "FLUSH PRIVILEGES;" && \
-    mysql $(grep "name" /etc/ems/config.yaml | awk '{printf $2}') < /tmp/database.dump
+RUN service mariadb start & sleep 10 && \
+    mysql -u root -e "CREATE USER '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASSWORD}';" && \
+    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO '${DB_USER}'@'${DB_HOST}'; FLUSH PRIVILEGES;" && \
+    goose -dir "/etc/ems/migrations" -table db_version mysql "${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?parseTime=True" up
 
 RUN /usr/bin/influxd & sleep 5 && \
     /usr/bin/influx setup \
@@ -34,7 +38,7 @@ RUN /usr/bin/influxd & sleep 5 && \
     -r $(grep "retention" /etc/ems/config.yaml | awk '{printf $2}') \
     -f -n default --host http://:8086
 
-ENTRYPOINT /usr/sbin/mysqld & sleep 2 && /usr/bin/influxd & sleep 2 && \
+ENTRYPOINT service mariadb start & sleep 2 && /usr/bin/influxd & sleep 2 && \
     /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & \
     /usr/bin/ems-backend -c /etc/ems/config.yaml & bash
 

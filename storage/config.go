@@ -3,11 +3,11 @@ package storage
 import "fmt"
 
 type Config struct {
-	Name     string `yaml:"name"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
+	Name     string `envconfig:"DB_NAME"`
+	User     string `envconfig:"DB_USER"`
+	Password string `envconfig:"DB_PASSWORD"`
+	Host     string `envconfig:"DB_HOST"`
+	Port     string `envconfig:"DB_PORT"`
 }
 
 func (m *Config) String() string {

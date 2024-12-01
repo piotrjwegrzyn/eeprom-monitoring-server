@@ -87,7 +87,7 @@ func (s *server) indexHtml(w http.ResponseWriter, r *http.Request) {
 
 	slog.InfoContext(r.Context(), fmt.Sprintf("%s%s (%s / %s)", r.Host, r.URL, r.Method, r.Proto))
 
-	devices, err := s.db.Devices(context.Background())
+	devices, err := s.db.Devices(r.Context())
 	if err != nil {
 		slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		s.templates["index.html"].Execute(w, nil)
@@ -125,7 +125,7 @@ func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err = s.db.CreateDevice(context.Background(), storage.Device{Hostname: hostname, IPAddress: ip, Login: login, Password: password, Keyfile: key}); err != nil {
+		if err = s.db.CreateDevice(r.Context(), storage.Device{Hostname: hostname, IPAddress: ip, Login: login, Password: password, Keyfile: key}); err != nil {
 			slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		}
 
@@ -146,7 +146,7 @@ func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, err := s.db.Device(context.Background(), uint(id))
+	device, err := s.db.Device(r.Context(), uint(id))
 	if err != nil {
 		slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -198,7 +198,7 @@ func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
 
 		device.Hostname, device.IPAddress, device.Login = hostname, ip, login
 
-		if err := s.db.UpdateDevice(context.Background(), device); err != nil {
+		if err := s.db.UpdateDevice(r.Context(), device); err != nil {
 			slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		}
 
@@ -220,7 +220,7 @@ func (s *server) delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err = s.db.DeleteDevice(context.Background(), uint(id)); err != nil {
+		if err = s.db.DeleteDevice(r.Context(), uint(id)); err != nil {
 			slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
 		}
 	}
@@ -255,7 +255,7 @@ func (s *server) Start(ctx context.Context, staticDir string) error {
 	http.HandleFunc("/logout", s.logOut)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
-	slog.InfoContext(ctx, fmt.Sprintf("Serving HTTP on 0.0.0.0 port %[1]d (http://0.0.0.0:%[1]d/) ...\n", s.config.Port))
+	slog.InfoContext(ctx, fmt.Sprintf("Serving HTTP on 0.0.0.0 port %[1]d (http://0.0.0.0:%[1]d/) ...", s.config.Port))
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", s.config.Port), nil)
 }

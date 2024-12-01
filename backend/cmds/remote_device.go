@@ -56,7 +56,6 @@ CLIENT_CREATION:
 
 	interfaces, err := d.getInterfaces(client)
 	if err != nil {
-		fmt.Printf("Error with getting interfaces: %v (device ID: %d)\n", err, d.ID)
 		slog.ErrorContext(ctx, "error with getting interfaces", slog.Any("deviceID", d.ID), slog.Any("error", err))
 		d.ExitSignal <- storage.STATUS_ERROR_SSH
 		return
@@ -176,6 +175,6 @@ func (d *remoteDevice) processData(input []byte) (utils.InterfaceData, error) {
 		Voltage:     voltage(decoded),
 		TxPower:     txPower(decoded),
 		RxPower:     rxPower(decoded),
-		Osnr:        osnr(decoded),
+		OSNR:        osnr(decoded),
 	}, nil
 }
