@@ -1,4 +1,11 @@
-FROM golang:1.23.3-bookworm
+FROM golang:1.23.3 AS build
+WORKDIR /go/src
+COPY . .
+ENV CGO_ENABLED=0
+RUN go build -C frontend -ldflags="-w -s" -trimpath -o /ems-frontend
+RUN go build -C backend -ldflags="-w -s" -trimpath -o /ems-backend
+
+FROM golang:1.23.3-bookworm AS aio
 LABEL VERSION=latest
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mariadb-server
@@ -13,15 +20,14 @@ ARG DB_HOST=localhost
 ARG DB_PORT=3306
 ARG PORT=80
 
-COPY ./bin/ems-frontend /usr/bin/ems-frontend
-COPY ./bin/ems-backend /usr/bin/ems-backend
-COPY ./frontend/static/ /etc/ems/static/
-COPY ./frontend/templates/ /etc/ems/templates/
-COPY ${CONFIG} /etc/ems/config.yaml
-COPY ./testdata/mysql.dump /tmp/database.dump
+COPY --from=build /ems-frontend /usr/bin/ems-frontend
+COPY --from=build /ems-backend /usr/bin/ems-backend
 COPY ./bin/influxd /usr/bin/influxd
 COPY ./bin/influxc /usr/bin/influx
+COPY ./frontend/static/ /etc/ems/static/
+COPY ./frontend/templates/ /etc/ems/templates/
 COPY ./storage/sqlc/migrations/ /etc/ems/migrations/
+COPY ${CONFIG} /etc/ems/config.yaml
 
 RUN service mariadb start & sleep 10 && \
     mysql -u root -e "CREATE USER '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASSWORD}';" && \
