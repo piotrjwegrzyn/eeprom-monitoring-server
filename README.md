@@ -25,7 +25,7 @@ The configured Server periodically gain SFPs' EEPROM data from network hosts. It
 ### Preconditions
 To successfully build all steps it is required to have installed:
 * make
-* Go v1.22.3 or later
+* Go v1.23.3 or later
 * Docker
 * wget and tar
 
@@ -41,6 +41,24 @@ make
 To build generic EP (with scenario from `testdata/generator.yaml` file) run:
 ```
 make sample-presenter
+```
+
+### Developing and testing
+
+To develop and run integration tests on database install:
+* minikube
+* skaffold
+* sqlc
+* goose
+
+Then simply run database chart:
+```
+skaffold dev -p database
+```
+
+And perform tests:
+```
+DB_NAME=mysql DB_USER=root DB_PASSWORD=root DB_HOST=127.0.0.1 DB_PORT=3306 go test ./storage/... --tags=integration -cover
 ```
 
 ## EEPROM Monitoring Server

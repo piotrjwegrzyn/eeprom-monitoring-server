@@ -1,7 +1,8 @@
 package cmds
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -20,7 +21,7 @@ func (ac cookie) isExpired() bool {
 // cookies key represents a session token
 type cookies map[string]cookie
 
-func (ac cookies) createCookie(w http.ResponseWriter, username string) {
+func (ac cookies) createCookie(ctx context.Context, w http.ResponseWriter, username string) {
 	token := uuid.NewString()
 	expiration := time.Now().Add(15 * time.Minute)
 
@@ -35,10 +36,10 @@ func (ac cookies) createCookie(w http.ResponseWriter, username string) {
 		Expires: expiration,
 	})
 
-	log.Printf("Created cookie for user: %s (cookie expires on: %s)\n", username, expiration.Format(time.RFC3339))
+	slog.InfoContext(ctx, "created cookie for user", slog.Any("username", username), slog.Any("expiresAt", expiration))
 }
 
-func (ac cookies) deleteCookie(w http.ResponseWriter, r *http.Request) {
+func (ac cookies) deleteCookie(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -49,7 +50,7 @@ func (ac cookies) deleteCookie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Deleting cookie for user: %s\n", ac[cookie.Value].Login)
+	slog.InfoContext(ctx, "deleting cookie for user", slog.Any("username", ac[cookie.Value].Login))
 	delete(ac, cookie.Value)
 
 	http.SetCookie(w, &http.Cookie{

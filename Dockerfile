@@ -1,28 +1,38 @@
-FROM ubuntu:latest
+FROM golang:1.23.3 AS build
+WORKDIR /go/src
+COPY . .
+ENV CGO_ENABLED=0
+RUN go build -C frontend -ldflags="-w -s" -trimpath -o /ems-frontend
+RUN go build -C backend -ldflags="-w -s" -trimpath -o /ems-backend
+
+FROM golang:1.23.3-bookworm AS aio
 LABEL VERSION=latest
 
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mysql-server
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mariadb-server
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CONFIG=./testdata/ems.yaml
-ARG MYSQL_USER=http
-ARG MYSQL_PASSWORD=http-password
 ARG PORT=80
+ENV DB_NAME=mysql
+ENV DB_USER=http
+ENV DB_PASSWORD=http-password
+ENV DB_HOST=localhost
+ENV DB_PORT=3306
 
-COPY ./bin/ems-frontend /usr/bin/ems-frontend
-COPY ./bin/ems-backend /usr/bin/ems-backend
-COPY ./frontend/static/ /etc/ems/static/
-COPY ./frontend/templates/ /etc/ems/templates/
-COPY ${CONFIG} /etc/ems/config.yaml
-COPY ./testdata/mysql.dump /tmp/database.dump
+COPY --from=build /ems-frontend /usr/bin/ems-frontend
+COPY --from=build /ems-backend /usr/bin/ems-backend
 COPY ./bin/influxd /usr/bin/influxd
 COPY ./bin/influxc /usr/bin/influx
+COPY ./frontend/static/ /etc/ems/static/
+COPY ./frontend/templates/ /etc/ems/templates/
+COPY ./storage/sqlc/migrations/ /etc/ems/migrations/
+COPY ${CONFIG} /etc/ems/config.yaml
 
-RUN /usr/sbin/mysqld & sleep 5 && \
-    mysql -u root -e "CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';" && \
-    mysql -u root -e "CREATE DATABASE \`$(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}')\`" && \
-    mysql -u root -e "GRANT ALL PRIVILEGES ON \`$(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}')\`.* TO '${MYSQL_USER}'@'localhost';" && \
-    mysql -u root -e "FLUSH PRIVILEGES;" && \
-    mysql $(grep "dbname" /etc/ems/config.yaml | awk '{printf $2}') < /tmp/database.dump
+RUN service mariadb start & sleep 10 && \
+    mysql -u root -e "CREATE USER '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASSWORD}';" && \
+    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO '${DB_USER}'@'${DB_HOST}'; FLUSH PRIVILEGES;" && \
+    goose -dir "/etc/ems/migrations" -table db_version mysql "${DB_USER}:${DB_PASSWORD}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?parseTime=True" up
 
 RUN /usr/bin/influxd & sleep 5 && \
     /usr/bin/influx setup \
@@ -34,7 +44,7 @@ RUN /usr/bin/influxd & sleep 5 && \
     -r $(grep "retention" /etc/ems/config.yaml | awk '{printf $2}') \
     -f -n default --host http://:8086
 
-ENTRYPOINT /usr/sbin/mysqld & sleep 2 && /usr/bin/influxd & sleep 2 && \
+ENTRYPOINT service mariadb start & sleep 2 && /usr/bin/influxd & sleep 2 && \
     /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & \
     /usr/bin/ems-backend -c /etc/ems/config.yaml & bash
 

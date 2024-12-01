@@ -2,8 +2,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -17,7 +15,6 @@ type Delays struct {
 
 type Config struct {
 	Users  map[string]string `yaml:"users"`
-	MySQL  MySQL             `yaml:"mysql"`
 	Port   int               `yaml:"port"`
 	Delays Delays            `yaml:"delays"`
 	Influx Influx            `yaml:"influx"`
@@ -44,9 +41,4 @@ func StatPaths(paths []string) error {
 	}
 
 	return nil
-}
-
-func AdjustLogger(prefix string) {
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lmsgprefix)
-	log.SetPrefix(fmt.Sprintf("%10s: ", prefix))
 }

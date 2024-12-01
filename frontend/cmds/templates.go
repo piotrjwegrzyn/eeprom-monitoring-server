@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"path"
-	"pi-wegrzyn/utils"
+	"pi-wegrzyn/storage"
 	"strings"
 	"text/template"
 )
@@ -13,9 +13,15 @@ const (
 	LoginPattern string = `^[a-zA-Z][-a-zA-Z0-9\.\_]*[a-zA-Z0-9]$`
 )
 
+const (
+	TemplateIndex   = "index.html"
+	TemplateSignIn  = "signin.html"
+	TemplateNewEdit = "new.html"
+)
+
 type NewEdit struct {
 	Action       string
-	Device       utils.Device
+	Device       storage.Device
 	IPVersion    int
 	ErrorMessage string
 }
@@ -38,7 +44,7 @@ func initTemplates(dir string) (map[string]*template.Template, error) {
 	}
 
 	var err error
-	for _, t := range []string{"index.html", "new.html", "signin.html"} {
+	for _, t := range []string{TemplateIndex, TemplateNewEdit, TemplateSignIn} {
 		templates[t], err = template.New(t).Funcs(functions).ParseFiles(path.Join(dir, t))
 		if err != nil {
 			return nil, err

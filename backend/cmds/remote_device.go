@@ -1,12 +1,14 @@
 package cmds
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
+	"pi-wegrzyn/storage"
 	"pi-wegrzyn/utils"
 
 	"golang.org/x/crypto/ssh"
@@ -19,12 +21,12 @@ const (
 )
 
 type remoteDevice struct {
-	utils.Device
+	storage.Device
 	decode     func([]byte) ([]byte, error)
 	ExitSignal chan int8
 }
 
-func NewRemoteDevice(dev utils.Device, decode func([]byte) ([]byte, error)) *remoteDevice {
+func NewRemoteDevice(dev storage.Device, decode func([]byte) ([]byte, error)) *remoteDevice {
 	return &remoteDevice{
 		Device:     dev,
 		decode:     decode,
@@ -32,47 +34,47 @@ func NewRemoteDevice(dev utils.Device, decode func([]byte) ([]byte, error)) *rem
 	}
 }
 
-func (d *remoteDevice) Monitor(influx *utils.Influx, timeLimit time.Time, timeSleep time.Duration) {
-	log.Printf("Started goroutine for (device ID: %d)\n", d.ID)
+func (d *remoteDevice) Monitor(ctx context.Context, influx *utils.Influx, timeLimit time.Time, timeSleep time.Duration) {
+	slog.InfoContext(ctx, "started goroutine", slog.Any("deviceID", d.ID))
 
 CLIENT_CREATION:
 	auth, err := d.auth()
 	if err != nil {
-		log.Printf("Cannot parse key: %v (device ID: %d)\n", err, d.ID)
-		d.ExitSignal <- utils.STATUS_ERROR_KEYFILE
+		slog.ErrorContext(ctx, "cannot parse key", slog.Any("deviceID", d.ID), slog.Any("error", err))
+		d.ExitSignal <- storage.STATUS_ERROR_KEYFILE
 		return
 	}
 
 	client, err := d.sshClient(auth)
 	if err != nil {
-		log.Printf("SSH client error: %v (device ID: %d)\n", err, d.ID)
-		d.ExitSignal <- utils.STATUS_ERROR_SSH
+		slog.ErrorContext(ctx, "SSH client error", slog.Any("deviceID", d.ID), slog.Any("error", err))
+		d.ExitSignal <- storage.STATUS_ERROR_SSH
 		return
 	}
 	defer client.Close()
-	log.Printf("Created SSH client (device ID: %d)\n", d.ID)
+	slog.InfoContext(ctx, "created SSH client", slog.Any("deviceID", d.ID))
 
 	interfaces, err := d.getInterfaces(client)
 	if err != nil {
-		fmt.Printf("Error with getting interfaces: %v (device ID: %d)\n", err, d.ID)
-		d.ExitSignal <- utils.STATUS_ERROR_SSH
+		slog.ErrorContext(ctx, "error with getting interfaces", slog.Any("deviceID", d.ID), slog.Any("error", err))
+		d.ExitSignal <- storage.STATUS_ERROR_SSH
 		return
 	}
-	log.Printf("Detected %d interface(s) (device ID: %d)\n", len(interfaces), d.ID)
+	slog.InfoContext(ctx, fmt.Sprintf("detected %d interface(s)", len(interfaces)), slog.Any("deviceID", d.ID))
 
 	failedRuns := 0
 	for time.Now().Before(timeLimit) {
 		err := d.monitorInterfaces(client, interfaces, influx)
 		if err != nil {
-			log.Printf("Monitoring error(s) (device ID: %d):\n%v", d.ID, err)
+			slog.WarnContext(ctx, "monitoring error", slog.Any("deviceID", d.ID), slog.Any("error", err))
 			failedRuns += 1
 		}
 
 		if failedRuns > FAILED_RUNS_LIMIT {
-			log.Printf("Error limit exceeded (%d errors), trying to reconnect (device ID: %d)\n", failedRuns, d.ID)
+			slog.WarnContext(ctx, fmt.Sprintf("Error limit exceeded (%d errors), trying to reconnect", failedRuns), slog.Any("deviceID", d.ID))
 			if err := client.Close(); err != nil {
-				log.Printf("Closing session error: %v (device ID: %d)\n", err, d.ID)
-				d.ExitSignal <- utils.STATUS_ERROR_SSH
+				slog.ErrorContext(ctx, "closing session error", slog.Any("deviceID", d.ID), slog.Any("error", err))
+				d.ExitSignal <- storage.STATUS_ERROR_SSH
 				return
 			}
 
@@ -83,18 +85,18 @@ CLIENT_CREATION:
 	}
 
 	if failedRuns != 0 {
-		d.ExitSignal <- utils.STATUS_WARNING
+		d.ExitSignal <- storage.STATUS_WARNING
 	}
 
-	d.ExitSignal <- utils.STATUS_OK
+	d.ExitSignal <- storage.STATUS_OK
 }
 
 func (d *remoteDevice) auth() ([]ssh.AuthMethod, error) {
-	if d.Key == nil {
+	if len(d.Keyfile) == 0 {
 		return []ssh.AuthMethod{ssh.Password(d.Password)}, nil
 	}
 
-	signer, err := ssh.ParsePrivateKey(d.Key)
+	signer, err := ssh.ParsePrivateKey(d.Keyfile)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +112,7 @@ func (d *remoteDevice) sshClient(auth []ssh.AuthMethod) (*ssh.Client, error) {
 		Timeout:         10 * time.Second,
 	}
 
-	client, err := ssh.Dial("tcp", d.IP+":22", sshCfg)
+	client, err := ssh.Dial("tcp", d.IPAddress+":22", sshCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -139,20 +141,20 @@ func (d *remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string
 	for _, inf := range interfaces {
 		session, err2 := client.NewSession()
 		if err2 != nil {
-			err = errors.Join(err, fmt.Errorf("%v (interface: %s)\n", err2, inf))
+			err = errors.Join(err, fmt.Errorf("%v (interface: %s)", err2, inf))
 			continue
 		}
 		defer session.Close()
 
 		got, err2 := session.CombinedOutput(fmt.Sprintf(CMD_SHOW_EEPROM, inf))
 		if err2 != nil {
-			err = errors.Join(err, fmt.Errorf("%v (interface: %s)\n", err2, inf))
+			err = errors.Join(err, fmt.Errorf("%v (interface: %s)", err2, inf))
 			continue
 		}
 
 		interfaceData, err2 := d.processData(got)
 		if err2 != nil {
-			err = errors.Join(err, fmt.Errorf("%v (interface: %s)\n", err2, inf))
+			err = errors.Join(err, fmt.Errorf("%v (interface: %s)", err2, inf))
 			continue
 		}
 
@@ -173,6 +175,6 @@ func (d *remoteDevice) processData(input []byte) (utils.InterfaceData, error) {
 		Voltage:     voltage(decoded),
 		TxPower:     txPower(decoded),
 		RxPower:     rxPower(decoded),
-		Osnr:        osnr(decoded),
+		OSNR:        osnr(decoded),
 	}, nil
 }
