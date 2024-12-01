@@ -13,12 +13,12 @@ RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CONFIG=./testdata/ems.yaml
-ARG DB_NAME=mysql
-ARG DB_USER=http
-ARG DB_PASSWORD=http-password
-ARG DB_HOST=localhost
-ARG DB_PORT=3306
 ARG PORT=80
+ENV DB_NAME=mysql
+ENV DB_USER=http
+ENV DB_PASSWORD=http-password
+ENV DB_HOST=localhost
+ENV DB_PORT=3306
 
 COPY --from=build /ems-frontend /usr/bin/ems-frontend
 COPY --from=build /ems-backend /usr/bin/ems-backend
