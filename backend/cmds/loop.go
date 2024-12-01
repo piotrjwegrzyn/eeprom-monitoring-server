@@ -81,7 +81,7 @@ func (s *server) checkSignalsLoop(ctx context.Context) (err error) {
 		}
 
 		if err2 := s.db.UpdateDeviceStatus(ctx, r.Device); err2 != nil {
-			errors.Join(err, fmt.Errorf("error while updating device: %v (device ID: %d)", err2, r.ID))
+			err = errors.Join(err, fmt.Errorf("error while updating device: %v (device ID: %d)", err2, r.ID))
 		}
 	}
 

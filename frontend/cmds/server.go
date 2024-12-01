@@ -72,11 +72,11 @@ func (s *server) signInHtml(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.templates["signin.html"].Execute(w, "Wrong credentials, try again")
+		s.executeTemplate(r.Context(), w, TemplateSignIn, "Wrong credentials, try again")
 		return
 	}
 
-	s.templates["signin.html"].Execute(w, "")
+	s.executeTemplate(r.Context(), w, TemplateSignIn, "")
 }
 
 func (s *server) indexHtml(w http.ResponseWriter, r *http.Request) {
@@ -90,11 +90,11 @@ func (s *server) indexHtml(w http.ResponseWriter, r *http.Request) {
 	devices, err := s.db.Devices(r.Context())
 	if err != nil {
 		slog.ErrorContext(r.Context(), "database error", slog.Any("error", err))
-		s.templates["index.html"].Execute(w, nil)
+		s.executeTemplate(r.Context(), w, TemplateIndex, nil)
 		return
 	}
 
-	s.templates["index.html"].Execute(w, devices)
+	s.executeTemplate(r.Context(), w, TemplateIndex, devices)
 }
 
 func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
@@ -115,13 +115,13 @@ func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
 
 		if err = validateFormInput(&ipType, &hostname, &ip, &login); err != nil {
 			slog.ErrorContext(r.Context(), "validation error", slog.Any("error", err))
-			s.templates["new.html"].Execute(w, NewEdit{"New", storage.Device{Hostname: hostname, IPAddress: ip, Login: login}, ipType, prettifyError(err)})
+			s.executeTemplate(r.Context(), w, TemplateNewEdit, NewEdit{"New", storage.Device{Hostname: hostname, IPAddress: ip, Login: login}, ipType, prettifyError(err)})
 			return
 		}
 
 		key, err := retrieveSSHKey(r)
 		if err != nil {
-			s.templates["new.html"].Execute(w, NewEdit{"New", storage.Device{Hostname: hostname, IPAddress: ip, Login: login}, ipType, prettifyError(err)})
+			s.executeTemplate(r.Context(), w, TemplateNewEdit, NewEdit{"New", storage.Device{Hostname: hostname, IPAddress: ip, Login: login}, ipType, prettifyError(err)})
 			return
 		}
 
@@ -133,7 +133,7 @@ func (s *server) newHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.templates["new.html"].Execute(w, NewEdit{"New", storage.Device{}, 4, ""})
+	s.executeTemplate(r.Context(), w, TemplateNewEdit, NewEdit{"New", storage.Device{}, 4, ""})
 }
 
 func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
@@ -172,17 +172,16 @@ func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = validateFormInput(&ipType, &hostname, &ip, &login)
-		if err != nil {
+		if err := validateFormInput(&ipType, &hostname, &ip, &login); err != nil {
 			slog.ErrorContext(r.Context(), "validation error", slog.Any("error", err))
-			s.templates["new.html"].Execute(w, NewEdit{"Edit", device, deviceIpType, prettifyError(err)})
+			s.executeTemplate(r.Context(), w, TemplateNewEdit, NewEdit{"Edit", device, deviceIpType, prettifyError(err)})
 			return
 		}
 
 		newKey, err := retrieveSSHKey(r)
 		if err != nil {
 			slog.InfoContext(r.Context(), "error occurred while retrieving SSH key", slog.Any("error", err))
-			s.templates["new.html"].Execute(w, NewEdit{"Edit", device, deviceIpType, prettifyError(err)})
+			s.executeTemplate(r.Context(), w, TemplateNewEdit, NewEdit{"Edit", device, deviceIpType, prettifyError(err)})
 			return
 		}
 
@@ -206,7 +205,7 @@ func (s *server) editHtml(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.templates["new.html"].Execute(w, NewEdit{"Edit", device, deviceIpType, ""})
+	s.executeTemplate(r.Context(), w, TemplateNewEdit, NewEdit{"Edit", device, deviceIpType, ""})
 }
 
 func (s *server) delete(w http.ResponseWriter, r *http.Request) {
@@ -241,6 +240,12 @@ func (s *server) protected(handler func(w http.ResponseWriter, r *http.Request))
 		}
 
 		handler(w, r)
+	}
+}
+
+func (s *server) executeTemplate(ctx context.Context, w http.ResponseWriter, template string, content any) {
+	if err := s.templates[template].Execute(w, content); err != nil {
+		slog.ErrorContext(ctx, "failed to execute template", slog.Any("error", err), slog.Any("template", template))
 	}
 }
 

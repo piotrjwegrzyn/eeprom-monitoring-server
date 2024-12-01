@@ -5,6 +5,8 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"log/slog"
 	"time"
 
 	sqlc "pi-wegrzyn/storage/sqlc/generated"
@@ -24,10 +26,12 @@ func (d *DB) CreateDevice(ctx context.Context, device Device) error {
 		Ip:       device.IPAddress,
 		Login:    device.Login,
 		Passwd: sql.NullString{
-			String: device.Password,
+			Valid:  true,
+			String: base64.StdEncoding.EncodeToString([]byte(device.Password)),
 		},
 		Keyfile: sql.NullString{
-			String: string(device.Keyfile),
+			Valid:  true,
+			String: base64.StdEncoding.EncodeToString(device.Keyfile),
 		},
 		Connected: time.Now(),
 	}
@@ -41,13 +45,23 @@ func (d *DB) Device(ctx context.Context, id uint) (Device, error) {
 		return Device{}, err
 	}
 
+	password, err := base64.StdEncoding.DecodeString(dbDevice.Passwd.String)
+	if err != nil {
+		slog.ErrorContext(ctx, "cannot decode password", slog.Any("deviceID", dbDevice.ID), slog.Any("error", err))
+	}
+
+	keyfile, err := base64.StdEncoding.DecodeString(dbDevice.Keyfile.String)
+	if err != nil {
+		slog.ErrorContext(ctx, "cannot decode keyfile", slog.Any("deviceID", dbDevice.ID), slog.Any("error", err))
+	}
+
 	return Device{
 		ID:         dbDevice.ID,
 		Hostname:   dbDevice.Hostname,
 		IPAddress:  dbDevice.Ip,
 		Login:      dbDevice.Login,
-		Password:   dbDevice.Passwd.String,
-		Keyfile:    []byte(dbDevice.Keyfile.String),
+		Password:   string(password),
+		Keyfile:    keyfile,
 		Connected:  dbDevice.Connected,
 		LastStatus: int8(dbDevice.LastStatus),
 	}, nil
@@ -61,13 +75,23 @@ func (d *DB) Devices(ctx context.Context) ([]Device, error) {
 
 	devices := make([]Device, 0, len(dbDevices))
 	for _, dev := range dbDevices {
+		password, err := base64.StdEncoding.DecodeString(dev.Passwd.String)
+		if err != nil {
+			slog.ErrorContext(ctx, "cannot decode password", slog.Any("deviceID", dev.ID), slog.Any("error", err))
+		}
+
+		keyfile, err := base64.StdEncoding.DecodeString(dev.Keyfile.String)
+		if err != nil {
+			slog.ErrorContext(ctx, "cannot decode keyfile", slog.Any("deviceID", dev.ID), slog.Any("error", err))
+		}
+
 		devices = append(devices, Device{
 			ID:         dev.ID,
 			Hostname:   dev.Hostname,
 			Login:      dev.Login,
 			IPAddress:  dev.Ip,
-			Password:   dev.Passwd.String,
-			Keyfile:    []byte(dev.Keyfile.String),
+			Password:   string(password),
+			Keyfile:    keyfile,
 			Connected:  dev.Connected,
 			LastStatus: int8(dev.LastStatus),
 		})
@@ -83,10 +107,12 @@ func (d *DB) UpdateDevice(ctx context.Context, device Device) error {
 		Ip:       device.IPAddress,
 		Login:    device.Login,
 		Passwd: sql.NullString{
-			String: device.Password,
+			Valid:  true,
+			String: base64.StdEncoding.EncodeToString([]byte(device.Password)),
 		},
 		Keyfile: sql.NullString{
-			String: string(device.Keyfile),
+			Valid:  true,
+			String: base64.StdEncoding.EncodeToString(device.Keyfile),
 		},
 		Connected:  device.Connected,
 		LastStatus: int32(device.LastStatus),
