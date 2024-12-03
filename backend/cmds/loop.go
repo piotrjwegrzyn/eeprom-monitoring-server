@@ -9,18 +9,27 @@ import (
 
 	"pi-wegrzyn/backend/influx"
 	"pi-wegrzyn/storage"
-	"pi-wegrzyn/utils"
 )
 
+type Delays struct {
+	Startup float32 `yaml:"startup"`
+	SQL     float32 `yaml:"sql"`
+	SSH     float32 `yaml:"ssh"`
+}
+
+type Config struct {
+	Delays Delays `yaml:"delays"`
+}
+
 type server struct {
-	config  utils.Config
+	config  Config
 	db      *storage.DB
 	influx  *influx.Client
 	remotes []*remoteDevice
 }
 
-func NewServer(cfg *utils.Config, db *storage.DB, influx *influx.Client) *server {
-	return &server{config: *cfg, db: db, influx: influx}
+func NewServer(cfg Config, db *storage.DB, influx *influx.Client) *server {
+	return &server{config: cfg, db: db, influx: influx}
 }
 
 func (s *server) Loop(ctx context.Context) error {

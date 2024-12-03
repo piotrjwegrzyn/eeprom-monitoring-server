@@ -1,11 +1,4 @@
 ---
-# Web credentials (multiple entries only for devices' config page)
-users:
-  login: password
-
-# Port for devices' config page
-port: 80
-
 # Time steps for loop
 delays: # in seconds
   startup: 10.0

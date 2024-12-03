@@ -1,4 +1,4 @@
-//go:generate sqlc generate -f sqlc/config.yaml
+//go:generate go tool sqlc generate -f sqlc/config.yaml
 
 package storage
 
@@ -56,7 +56,7 @@ func (d *DB) Device(ctx context.Context, id uint) (Device, error) {
 	}
 
 	return Device{
-		ID:         dbDevice.ID,
+		ID:         uint(dbDevice.ID),
 		Hostname:   dbDevice.Hostname,
 		IPAddress:  dbDevice.Ip,
 		Login:      dbDevice.Login,
@@ -86,7 +86,7 @@ func (d *DB) Devices(ctx context.Context) ([]Device, error) {
 		}
 
 		devices = append(devices, Device{
-			ID:         dev.ID,
+			ID:         uint(dev.ID),
 			Hostname:   dev.Hostname,
 			Login:      dev.Login,
 			IPAddress:  dev.Ip,
@@ -102,7 +102,7 @@ func (d *DB) Devices(ctx context.Context) ([]Device, error) {
 
 func (d *DB) UpdateDevice(ctx context.Context, device Device) error {
 	updateParams := sqlc.UpdateDeviceParams{
-		ID:       device.ID,
+		ID:       uint32(device.ID),
 		Hostname: device.Hostname,
 		Ip:       device.IPAddress,
 		Login:    device.Login,
@@ -117,15 +117,17 @@ func (d *DB) UpdateDevice(ctx context.Context, device Device) error {
 		Connected:  device.Connected,
 		LastStatus: int32(device.LastStatus),
 	}
+
 	return d.q.UpdateDevice(ctx, updateParams)
 }
 
 func (d *DB) UpdateDeviceStatus(ctx context.Context, device Device) error {
 	updateParams := sqlc.UpdateDeviceStatusParams{
-		ID:         device.ID,
+		ID:         uint32(device.ID),
 		Connected:  device.Connected,
 		LastStatus: int32(device.LastStatus),
 	}
+
 	return d.q.UpdateDeviceStatus(ctx, updateParams)
 }
 
