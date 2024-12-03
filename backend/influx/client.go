@@ -24,7 +24,7 @@ func New(cfg Config, influxClient APIWriter) *Client {
 	}
 }
 
-type Point struct {
+type Measurement struct {
 	Temperature float64
 	Voltage     float64
 	TxPower     float64
@@ -32,7 +32,7 @@ type Point struct {
 	OSNR        float64
 }
 
-func (c *Client) InsertMeasurements(hostname string, interfaceName string, data Point) {
+func (c *Client) InsertMeasurements(hostname string, interfaceName string, data Measurement) {
 	writeAPI := c.influxClient.WriteAPI(c.config.Org, c.config.Bucket)
 
 	p := influxdb2.NewPoint(

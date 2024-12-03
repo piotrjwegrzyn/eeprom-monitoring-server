@@ -164,13 +164,13 @@ func (d *remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string
 	return err
 }
 
-func (d *remoteDevice) processData(input []byte) (influx.Point, error) {
+func (d *remoteDevice) processData(input []byte) (influx.Measurement, error) {
 	decoded, err := d.decode(input)
 	if err != nil {
-		return influx.Point{}, err
+		return influx.Measurement{}, err
 	}
 
-	return influx.Point{
+	return influx.Measurement{
 		Temperature: temperature(decoded),
 		Voltage:     voltage(decoded),
 		TxPower:     txPower(decoded),

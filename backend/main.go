@@ -88,7 +88,7 @@ func connectToDatabase(cfg storage.Config) (conn *sql.DB, closeConn func(), err 
 }
 
 func connectToInfluxDB(cfg influx.Config) (influxdb2.Client, error) {
-	client := influxdb2.NewClient(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), cfg.Token)
+	client := influxdb2.NewClient(fmt.Sprintf("http://%s:%s", cfg.Host, cfg.Port), cfg.Token)
 	_, err := client.Health(context.Background())
 	return client, err
 }

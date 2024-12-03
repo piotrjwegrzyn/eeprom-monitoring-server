@@ -20,14 +20,14 @@ profiles:
         port: 3306
         localPort: 3306
   
-  - name: bucket
+  - name: influx
     activation:
-      - env: BUCKET=1
+      - env: INFLUX=1
         kubeContext: minikube
     deploy:
       helm:
         releases:
-          - name: ems-bucket
+          - name: ems-influx
             remoteChart: influxdb2
             repo: https://helm.influxdata.com
             wait: true
@@ -40,7 +40,7 @@ profiles:
                 password: long_password
                 token: v3rY-d1ff1cUlT-t0k3n
     portForward:
-      - resourceName: ems-bucket-influxdb2
+      - resourceName: ems-influx-influxdb2
         resourceType: service
         address: 127.0.0.1
         port: 80
