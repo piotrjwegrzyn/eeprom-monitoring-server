@@ -1,0 +1,7 @@
+package: oapi
+generate:
+  embedded-spec: true
+  strict-server: true
+  models: true
+  std-http-server: true
+output: oapi/generated/oapi.go
