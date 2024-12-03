@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"pi-wegrzyn/backend/influx"
 	"pi-wegrzyn/storage"
 	"pi-wegrzyn/utils"
 )
@@ -14,11 +15,12 @@ import (
 type server struct {
 	config  utils.Config
 	db      *storage.DB
+	influx  *influx.Client
 	remotes []*remoteDevice
 }
 
-func NewServer(cfg *utils.Config, db *storage.DB) *server {
-	return &server{config: *cfg, db: db}
+func NewServer(cfg *utils.Config, db *storage.DB, influx *influx.Client) *server {
+	return &server{config: *cfg, db: db, influx: influx}
 }
 
 func (s *server) Loop(ctx context.Context) error {
@@ -58,7 +60,7 @@ func (s *server) prepareRemotes(ctx context.Context) error {
 		timeLimit := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL-s.config.Delays.SSH))
 		timeSleep := time.Duration(s.config.Delays.SSH) * time.Second
 
-		go c.Monitor(ctx, &s.config.Influx, timeLimit, timeSleep)
+		go c.Monitor(ctx, s.influx, timeLimit, timeSleep)
 	}
 
 	slog.InfoContext(ctx, fmt.Sprintf("prepared %d remote handlers", len(s.remotes)))

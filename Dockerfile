@@ -14,11 +14,19 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CONFIG=./testdata/ems.yaml
 ARG PORT=80
+
 ENV DB_NAME=mysql
 ENV DB_USER=http
 ENV DB_PASSWORD=http-password
 ENV DB_HOST=localhost
 ENV DB_PORT=3306
+
+ENV INFLUX_BUCKET=ems
+ENV INFLUX_ORG=eeprom-monitoring-server
+ENV INFLUX_TOKEN=v3rY-d1ff1cUlT-t0k3n
+ENV INFLUX_HOST=http://localhost
+ENV INFLUX_PORT=8086
+ENV INFLUX_RETENTION=24h
 
 COPY --from=build /ems-frontend /usr/bin/ems-frontend
 COPY --from=build /ems-backend /usr/bin/ems-backend
@@ -38,15 +46,15 @@ RUN /usr/bin/influxd & sleep 5 && \
     /usr/bin/influx setup \
     -u $(grep -1 "users" /etc/ems/config.yaml | tail -1 | awk '{printf substr($1, 1, length($1)-1)}') \
     -p $(grep -1 "users" /etc/ems/config.yaml | tail -1 | awk '{printf $2}') \
-    -t $(grep "token" /etc/ems/config.yaml | awk '{printf $2}') \
-    -o $(grep "org" /etc/ems/config.yaml | awk '{printf $2}') \
-    -b $(grep "bucket" /etc/ems/config.yaml | awk '{printf $2}') \
-    -r $(grep "retention" /etc/ems/config.yaml | awk '{printf $2}') \
-    -f -n default --host http://:8086
+    -t ${INFLUX_TOKEN} \
+    -o ${INFLUX_ORG} \
+    -b ${INFLUX_BUCKET} \
+    -r ${INFLUX_RETENTION} \
+    -f -n default --host ${INFLUX_HOST}:${INFLUX_PORT}
 
 ENTRYPOINT service mariadb start & sleep 2 && /usr/bin/influxd & sleep 2 && \
     /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & \
     /usr/bin/ems-backend -c /etc/ems/config.yaml & bash
 
 EXPOSE ${PORT}
-EXPOSE 8086
+EXPOSE ${INFLUX_PORT}
