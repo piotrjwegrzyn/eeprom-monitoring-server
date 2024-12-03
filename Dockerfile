@@ -52,8 +52,8 @@ RUN /usr/bin/influxd & sleep 5 && \
     -r ${INFLUX_RETENTION} \
     -f -n default --host ${INFLUX_HOST}:${INFLUX_PORT}
 
-ENTRYPOINT service mariadb start & sleep 2 && /usr/bin/influxd & sleep 2 && \
-    /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & \
+ENTRYPOINT /usr/bin/influxd & sleep 10 && service mariadb start & sleep 10 && \
+    /usr/bin/ems-frontend -s /etc/ems/static/ -t /etc/ems/templates/ -c /etc/ems/config.yaml & sleep 10 && \
     /usr/bin/ems-backend -c /etc/ems/config.yaml & bash
 
 EXPOSE ${PORT}
