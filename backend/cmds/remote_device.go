@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"pi-wegrzyn/backend/influx"
 	"pi-wegrzyn/storage"
-	"pi-wegrzyn/utils"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -34,7 +34,7 @@ func NewRemoteDevice(dev storage.Device, decode func([]byte) ([]byte, error)) *r
 	}
 }
 
-func (d *remoteDevice) Monitor(ctx context.Context, influx *utils.Influx, timeLimit time.Time, timeSleep time.Duration) {
+func (d *remoteDevice) Monitor(ctx context.Context, influxClient *influx.Client, timeLimit time.Time, timeSleep time.Duration) {
 	slog.InfoContext(ctx, "started goroutine", slog.Any("deviceID", d.ID))
 
 CLIENT_CREATION:
@@ -64,7 +64,7 @@ CLIENT_CREATION:
 
 	failedRuns := 0
 	for time.Now().Before(timeLimit) {
-		err := d.monitorInterfaces(client, interfaces, influx)
+		err := d.monitorInterfaces(client, interfaces, influxClient)
 		if err != nil {
 			slog.WarnContext(ctx, "monitoring error", slog.Any("deviceID", d.ID), slog.Any("error", err))
 			failedRuns += 1
@@ -137,7 +137,7 @@ func (d *remoteDevice) getInterfaces(client *ssh.Client) ([]string, error) {
 	return infs[:len(infs)-1], nil
 }
 
-func (d *remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string, influx *utils.Influx) (err error) {
+func (d *remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string, influxClient *influx.Client) (err error) {
 	for _, inf := range interfaces {
 		session, err2 := client.NewSession()
 		if err2 != nil {
@@ -158,19 +158,19 @@ func (d *remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string
 			continue
 		}
 
-		influx.Insert(d.Hostname, inf, &interfaceData)
+		influxClient.InsertMeasurements(d.Hostname, inf, interfaceData)
 	}
 
-	return
+	return err
 }
 
-func (d *remoteDevice) processData(input []byte) (utils.InterfaceData, error) {
+func (d *remoteDevice) processData(input []byte) (influx.Measurement, error) {
 	decoded, err := d.decode(input)
 	if err != nil {
-		return utils.InterfaceData{}, err
+		return influx.Measurement{}, err
 	}
 
-	return utils.InterfaceData{
+	return influx.Measurement{
 		Temperature: temperature(decoded),
 		Voltage:     voltage(decoded),
 		TxPower:     txPower(decoded),

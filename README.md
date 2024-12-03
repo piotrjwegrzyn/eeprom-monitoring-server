@@ -59,6 +59,7 @@ skaffold dev -p database
 And perform tests:
 ```
 DB_NAME=mysql DB_USER=root DB_PASSWORD=root DB_HOST=127.0.0.1 DB_PORT=3306 go test ./storage/... --tags=integration -cover
+INFLUX_BUCKET=ems INFLUX_ORG=eeprom-monitoring-server INFLUX_TOKEN=v3rY-d1ff1cUlT-t0k3n INFLUX_HOST=http://127.0.0.1 INFLUX_PORT=8086 go test . --tags=integration -cover
 ```
 
 ## EEPROM Monitoring Server

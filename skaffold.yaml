@@ -18,3 +18,30 @@ profiles:
         resourceType: service
         address: 127.0.0.1
         port: 3306
+        localPort: 3306
+  
+  - name: influx
+    activation:
+      - env: INFLUX=1
+        kubeContext: minikube
+    deploy:
+      helm:
+        releases:
+          - name: ems-influx
+            remoteChart: influxdb2
+            repo: https://helm.influxdata.com
+            wait: true
+            setValueTemplates:
+              adminUser:
+                organization: eeprom-monitoring-server
+                bucket: ems
+                user: admin
+                retention_policy: 24h
+                password: long_password
+                token: v3rY-d1ff1cUlT-t0k3n
+    portForward:
+      - resourceName: ems-influx-influxdb2
+        resourceType: service
+        address: 127.0.0.1
+        port: 80
+        localPort: 8086
