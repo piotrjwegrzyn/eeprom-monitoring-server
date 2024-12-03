@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kelseyhightower/envconfig"
 
 	"pi-wegrzyn/backend/cmds"
+	"pi-wegrzyn/backend/influx"
 	"pi-wegrzyn/storage"
 	"pi-wegrzyn/utils"
 )
@@ -42,6 +45,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	var influxCfg influx.Config
+	if err := envconfig.Process("", &influxCfg); err != nil {
+		slog.ErrorContext(appCtx, "cannot read influx configuration", slog.Any("error", err))
+		os.Exit(1)
+	}
+
 	conn, closeConn, err := connectToDatabase(dbCfg)
 	if err != nil {
 		slog.Error("cannot connect to database", slog.Any("error", err))
@@ -49,15 +58,22 @@ func main() {
 	}
 	defer closeConn()
 
-	server := cmds.NewServer(&cfg, storage.New(conn))
+	client, err := connectToInfluxDB(influxCfg)
+	if err != nil {
+		slog.Error("cannot connect to influxdb", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer client.Close()
+
+	server := cmds.NewServer(&cfg, storage.New(conn), influx.New(influxCfg, client))
 	if err := server.Loop(appCtx); err != nil {
 		slog.ErrorContext(appCtx, "server failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func connectToDatabase(config storage.Config) (conn *sql.DB, closeConn func(), err error) {
-	conn, err = sql.Open("mysql", config.String())
+func connectToDatabase(cfg storage.Config) (conn *sql.DB, closeConn func(), err error) {
+	conn, err = sql.Open("mysql", cfg.String())
 	if err != nil {
 		return conn, closeConn, err
 	}
@@ -69,4 +85,10 @@ func connectToDatabase(config storage.Config) (conn *sql.DB, closeConn func(), e
 	}
 
 	return conn, closeConn, nil
+}
+
+func connectToInfluxDB(cfg influx.Config) (influxdb2.Client, error) {
+	client := influxdb2.NewClient(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), cfg.Token)
+	_, err := client.Health(context.Background())
+	return client, err
 }

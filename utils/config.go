@@ -17,7 +17,6 @@ type Config struct {
 	Users  map[string]string `yaml:"users"`
 	Port   int               `yaml:"port"`
 	Delays Delays            `yaml:"delays"`
-	Influx Influx            `yaml:"influx"`
 }
 
 func ReadConfig(filename string, out any) error {

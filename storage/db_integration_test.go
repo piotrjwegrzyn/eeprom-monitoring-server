@@ -1,5 +1,13 @@
 //go:build integration
 
+// To run the test properly use the following command:
+// export DB_NAME=<database> && \
+// export DB_USER=<username> && \
+// export DB_PASSWORD=<password> && \
+// export DB_HOST=<hostname> && \
+// export DB_PORT=<port> && \
+// go test ./... --tags=integration -cover
+
 package storage
 
 import (
