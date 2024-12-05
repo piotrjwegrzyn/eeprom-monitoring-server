@@ -37,52 +37,164 @@ paths:
           description: Wrong credentials
         303:
           description: Login success
+
   /:
     get:
       summary: Main configuration page
       responses:
         200:
           description: Returns the main configuration page
+      security:
+        - cookieAuth: []
 
-#   /backup:
-#     get:
-#       summary: Get last available backup zip archive
-#       responses:
-#         200:
-#           description: Returns a zip file
-#           content:
-#             application/zip:
-#               encoding:
-#                 gzip:
-#                   contentType: application/zip
-#         401:
-#           description: Unauthorized
-#         404:
-#           description: Not Found
-#       security:
-#         - tokenAuth: []
+  /new:
+    get:
+      summary: Load New device page
+      responses:
+        200:
+          description: Returns the New device page
+    post:
+      summary: Create new device
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                hostname:
+                  type: string
+                ip:
+                  type: string
+                ip-type:
+                  type: integer
+                  pattern: '^[46]$'
+                login:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                key:
+                  type: string
+                  format: binary
+              required:
+                - hostname
+                - ip
+                - ip-type
+                - login
+      responses:
+        200:
+          description: Returns New device page (might be with error)
+        303:
+          description: Creates device and redirects to /
+      security:
+        - cookieAuth: []
 
-#     put:
-#       summary: Put a new backup zip archive
-#       requestBody:
-#         description: The zip archive
-#         content:
-#           application/zip:
-#             encoding:
-#               gzip:
-#                 contentType: application/zip
-#         required: true
-#       responses:
-#         204:
-#           description: The file is created
-#         401:
-#           description: Unauthorized
-#       security:
-#         - tokenAuth: []
+  /edit:
+    get:
+      summary: Load Edit device page
+      parameters:
+        - in: query
+          name: edit-id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Returns the Edit device page
+      security:
+        - cookieAuth: []
+    post:
+      summary: Update device
+      parameters:
+        - in: query
+          name: edit-id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                hostname:
+                  type: string
+                ip:
+                  type: string
+                ip-type:
+                  type: integer
+                  pattern: '^[46]$'
+                login:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                key:
+                  type: string
+                  format: binary
+              required:
+                - hostname
+                - ip
+                - ip-type
+                - login
+      responses:
+        200:
+          description: Returns Edit device page (might be with error)
+        303:
+          description: Updates device and redirects to /
+      security:
+        - cookieAuth: []
 
-# components:
-#   securitySchemes:
-#     tokenAuth:
-#       type: apiKey
-#       name: backupToken
-#       in: query
+  /delete:
+    post:
+      summary: Load Edit device page
+      parameters:
+        - in: query
+          name: delete-id
+          required: true
+          schema:
+            type: integer
+      responses:
+        303:
+          description: Deletes device and redirects to /
+      security:
+        - cookieAuth: []
+
+  /logout:
+    get:
+      summary: Log out
+      responses:
+        303:
+          description: Deletes device and redirects to /
+
+  /favicon.ico:
+    get:
+      summary: Serve the favicon
+      responses:
+        200:
+          description: The favicon
+          content:
+            image/x-icon:
+              schema:
+                type: string
+                format: binary
+
+  /style.css:
+    get:
+      summary: Serve the CSS stylesheet
+      responses:
+        200:
+          description: The CSS stylesheet
+          content:
+            text/css:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      name: session_token
+      in: cookie
