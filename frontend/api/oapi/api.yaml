@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.1.1
 info:
   title: EMS frontend API
   description: An API for accessing configuration page of EEPROM Monitoring Server
@@ -32,6 +32,9 @@ paths:
                 password:
                   type: string
                   format: password
+              required:
+                - login
+                - password
       responses:
         200:
           description: Wrong credentials
