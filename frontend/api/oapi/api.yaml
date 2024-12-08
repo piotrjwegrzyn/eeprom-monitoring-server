@@ -170,7 +170,7 @@ paths:
       summary: Log out
       responses:
         303:
-          description: Deletes device and redirects to /
+          description: Logs out and redirects to /signin
 
   /favicon.ico:
     get:

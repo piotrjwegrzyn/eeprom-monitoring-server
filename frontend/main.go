@@ -3,16 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
-	"flag"
 	"log/slog"
+	"net/http"
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kelseyhightower/envconfig"
 
-	"pi-wegrzyn/frontend/cmds"
+	"pi-wegrzyn/frontend/api"
 	"pi-wegrzyn/storage"
-	"pi-wegrzyn/utils"
 )
 
 type ctxKey string
@@ -22,18 +21,8 @@ const appNameAttr ctxKey = "app"
 func main() {
 	appCtx := context.WithValue(context.Background(), appNameAttr, "frontend")
 
-	configPath := flag.String("c", "config.yaml", "Path to config file (YAML file)")
-	templatesPath := flag.String("t", "templates/", "Path to templates directory (HTML files)")
-	staticDir := flag.String("s", "static/", "Path to static files (CSS and favicon)")
-	flag.Parse()
-
-	if err := utils.StatPaths([]string{*configPath, *templatesPath, *staticDir}); err != nil {
-		slog.ErrorContext(appCtx, "cannot use provided path", slog.Any("error", err))
-		os.Exit(1)
-	}
-
-	var cfg utils.Config
-	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
+	var cfg api.Config
+	if err := envconfig.Process("", &cfg); err != nil {
 		slog.ErrorContext(appCtx, "cannot read configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
@@ -51,13 +40,14 @@ func main() {
 	}
 	defer closeConn()
 
-	server, err := cmds.NewServer(&cfg, *templatesPath, storage.New(conn))
+	cookies := make(map[string]api.Cookie)
+	handler, err := api.NewServerAPI(cfg, storage.New(conn), &cookies)
 	if err != nil {
 		slog.ErrorContext(appCtx, "cannot prepare server", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	if err := server.Start(appCtx, *staticDir); err != nil {
+	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		slog.ErrorContext(appCtx, "server failed", slog.Any("error", err))
 		os.Exit(1)
 	}
