@@ -3,61 +3,99 @@ package main
 import (
 	"context"
 	"database/sql"
-	"flag"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kelseyhightower/envconfig"
 
-	"pi-wegrzyn/frontend/cmds"
+	"pi-wegrzyn/frontend/api"
+	"pi-wegrzyn/frontend/cookies"
+	"pi-wegrzyn/frontend/templates"
 	"pi-wegrzyn/storage"
-	"pi-wegrzyn/utils"
 )
 
 type ctxKey string
 
 const appNameAttr ctxKey = "app"
 
+type config struct {
+	Port     string `envconfig:"APP_PORT" default:"8080"`
+	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+
+	apiConfig    api.Config
+	dbConfig     storage.Config
+	assetsConfig assetsConfig
+}
+
+type assetsConfig struct {
+	TemplatesDir string `envconfig:"TEMPLATES_DIR" default:"/ems/templates/"`
+	Style        string `envconfig:"STYLE_PATH" default:"/ems/static/style.css"`
+	Favicon      string `envconfig:"FAVICON_PATH" default:"/ems/static/favicon.ico"`
+}
+
 func main() {
-	appCtx := context.WithValue(context.Background(), appNameAttr, "frontend")
+	appCtx := context.WithValue(context.Background(), appNameAttr, "ems")
 
-	configPath := flag.String("c", "config.yaml", "Path to config file (YAML file)")
-	templatesPath := flag.String("t", "templates/", "Path to templates directory (HTML files)")
-	staticDir := flag.String("s", "static/", "Path to static files (CSS and favicon)")
-	flag.Parse()
-
-	if err := utils.StatPaths([]string{*configPath, *templatesPath, *staticDir}); err != nil {
-		slog.ErrorContext(appCtx, "cannot use provided path", slog.Any("error", err))
-		os.Exit(1)
-	}
-
-	var cfg utils.Config
-	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
+	var config config
+	if err := envconfig.Process("", &config); err != nil {
 		slog.ErrorContext(appCtx, "cannot read configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
-
-	var dbCfg storage.Config
-	if err := envconfig.Process("", &dbCfg); err != nil {
+	if err := envconfig.Process("API", &config.apiConfig); err != nil {
+		slog.ErrorContext(appCtx, "cannot read configuration", slog.Any("error", err))
+		os.Exit(1)
+	}
+	if err := envconfig.Process("DB", &config.dbConfig); err != nil {
 		slog.ErrorContext(appCtx, "cannot read database configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
+	if err := envconfig.Process("ASSETS", &config.assetsConfig); err != nil {
+		slog.ErrorContext(appCtx, "cannot read assets configuration", slog.Any("error", err))
+		os.Exit(1)
+	}
 
-	conn, closeConn, err := connectToDatabase(dbCfg)
+	tmplExecutor, err := templates.NewExecutor(config.assetsConfig.TemplatesDir)
+	if err != nil {
+		slog.ErrorContext(appCtx, "cannot initialize templates", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	css, err := os.ReadFile(config.assetsConfig.Style)
+	if err != nil {
+		slog.ErrorContext(appCtx, "cannot read css file", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	favicon, err := os.ReadFile(config.assetsConfig.Favicon)
+	if err != nil {
+		slog.ErrorContext(appCtx, "cannot read favicon file", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	conn, closeConn, err := connectToDatabase(config.dbConfig)
 	if err != nil {
 		slog.Error("cannot connect to database", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer closeConn()
 
-	server, err := cmds.NewServer(&cfg, *templatesPath, storage.New(conn))
-	if err != nil {
-		slog.ErrorContext(appCtx, "cannot prepare server", slog.Any("error", err))
-		os.Exit(1)
-	}
+	cookieStore := cookies.NewStore(15 * time.Minute)
 
-	if err := server.Start(appCtx, *staticDir); err != nil {
+	handler := api.NewServerAPI(
+		config.apiConfig,
+		storage.New(conn),
+		cookieStore,
+		tmplExecutor,
+		&api.StaticFiles{
+			CSS:     css,
+			Favicon: favicon,
+		},
+	)
+
+	if err := http.ListenAndServe(":"+config.Port, handler); err != nil {
 		slog.ErrorContext(appCtx, "server failed", slog.Any("error", err))
 		os.Exit(1)
 	}

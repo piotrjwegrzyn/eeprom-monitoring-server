@@ -9,7 +9,8 @@ import (
 	"path"
 
 	"pi-wegrzyn/generator/cmds"
-	"pi-wegrzyn/utils"
+
+	"gopkg.in/yaml.v2"
 )
 
 type ctxKey string
@@ -32,12 +33,12 @@ func main() {
 	}
 
 	var cfg cmds.Config
-	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
+	if err := readConfig(*configPath, &cfg); err != nil {
 		slog.ErrorContext(appCtx, "cannot read configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	for i := 0; i < len(cfg.Modules); i++ {
+	for i := range len(cfg.Modules) {
 		out := path.Join(*outputPath, cfg.Modules[i].Interface)
 		timelapse, err := cmds.CreateTimelapse(cfg.Modules[i], cfg.Duration)
 		if err != nil {
@@ -50,4 +51,17 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func readConfig(filename string, out any) error {
+	cfg, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	if err = yaml.Unmarshal(cfg, out); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -14,7 +15,7 @@ const (
 )
 
 type Device struct {
-	ID         uint32
+	ID         uint
 	Hostname   string
 	IPAddress  string
 	Login      string
@@ -22,6 +23,15 @@ type Device struct {
 	Keyfile    []byte
 	Connected  time.Time
 	LastStatus int8
+}
+
+func (d *Device) IPVersion() int {
+	ip := net.ParseIP(d.IPAddress)
+	if ip.To4() != nil {
+		return 4
+	}
+
+	return 6
 }
 
 func (d *Device) StatusConnected() string {

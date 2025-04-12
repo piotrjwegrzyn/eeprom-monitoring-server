@@ -11,11 +11,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kelseyhightower/envconfig"
+	"gopkg.in/yaml.v2"
 
 	"pi-wegrzyn/backend/cmds"
 	"pi-wegrzyn/backend/influx"
 	"pi-wegrzyn/storage"
-	"pi-wegrzyn/utils"
 )
 
 type ctxKey string
@@ -28,13 +28,8 @@ func main() {
 	var configPath = flag.String("c", "config.yaml", "Path to config file (YAML file)")
 	flag.Parse()
 
-	if err := utils.StatPaths([]string{*configPath}); err != nil {
-		slog.ErrorContext(appCtx, "cannot use provided path", slog.Any("error", err))
-		os.Exit(1)
-	}
-
-	var cfg utils.Config
-	if err := utils.ReadConfig(*configPath, &cfg); err != nil {
+	var cfg cmds.Config
+	if err := readConfig(*configPath, &cfg); err != nil {
 		slog.ErrorContext(appCtx, "cannot read configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
@@ -65,7 +60,7 @@ func main() {
 	}
 	defer client.Close()
 
-	server := cmds.NewServer(&cfg, storage.New(conn), influx.New(influxCfg, client))
+	server := cmds.NewServer(cfg, storage.New(conn), influx.New(influxCfg, client))
 	if err := server.Loop(appCtx); err != nil {
 		slog.ErrorContext(appCtx, "server failed", slog.Any("error", err))
 		os.Exit(1)
@@ -91,4 +86,17 @@ func connectToInfluxDB(cfg influx.Config) (influxdb2.Client, error) {
 	client := influxdb2.NewClient(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), cfg.Token)
 	_, err := client.Health(context.Background())
 	return client, err
+}
+
+func readConfig(filename string, out any) error {
+	cfg, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	if err = yaml.Unmarshal(cfg, out); err != nil {
+		return err
+	}
+
+	return nil
 }
