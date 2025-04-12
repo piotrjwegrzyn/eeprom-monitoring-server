@@ -10,10 +10,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	oapi "pi-wegrzyn/frontend/api/oapi/generated"
-	"pi-wegrzyn/frontend/cookies"
-	"pi-wegrzyn/frontend/templates"
-	"pi-wegrzyn/storage"
+	oapi "pi-wegrzyn/ems/api/oapi/generated"
+	"pi-wegrzyn/ems/cookies"
+	"pi-wegrzyn/ems/storage"
+	"pi-wegrzyn/ems/templates"
 )
 
 type Repository interface {

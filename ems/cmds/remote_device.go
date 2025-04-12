@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"pi-wegrzyn/backend/influx"
-	"pi-wegrzyn/storage"
+	"pi-wegrzyn/ems/influx"
+	"pi-wegrzyn/ems/storage"
 
 	"golang.org/x/crypto/ssh"
 )
