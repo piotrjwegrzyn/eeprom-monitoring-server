@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"pi-wegrzyn/backend/influx"
-	"pi-wegrzyn/storage"
+	"pi-wegrzyn/ems/influx"
+	"pi-wegrzyn/ems/storage"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -22,44 +22,44 @@ const (
 
 type remoteDevice struct {
 	storage.Device
-	decode     func([]byte) ([]byte, error)
-	ExitSignal chan int8
+	decode func([]byte) (Eeprom, error)
 }
 
-func NewRemoteDevice(dev storage.Device, decode func([]byte) ([]byte, error)) *remoteDevice {
+func NewRemoteDevice(dev storage.Device, decode func([]byte) (Eeprom, error)) *remoteDevice {
 	return &remoteDevice{
-		Device:     dev,
-		decode:     decode,
-		ExitSignal: make(chan int8, 1),
+		Device: dev,
+		decode: decode,
 	}
 }
 
-func (d *remoteDevice) Monitor(ctx context.Context, influxClient *influx.Client, timeLimit time.Time, timeSleep time.Duration) {
+func Monitor(ctx context.Context, influxClient *influx.Client, timeLimit time.Time, timeSleep time.Duration, d *remoteDevice) (status int8) {
 	slog.InfoContext(ctx, "started goroutine", slog.Any("deviceID", d.ID))
 
 CLIENT_CREATION:
 	auth, err := d.auth()
 	if err != nil {
 		slog.ErrorContext(ctx, "cannot parse key", slog.Any("deviceID", d.ID), slog.Any("error", err))
-		d.ExitSignal <- storage.STATUS_ERROR_KEYFILE
-		return
+
+		return storage.STATUS_ERROR_KEYFILE
 	}
 
 	client, err := d.sshClient(auth)
 	if err != nil {
 		slog.ErrorContext(ctx, "SSH client error", slog.Any("deviceID", d.ID), slog.Any("error", err))
-		d.ExitSignal <- storage.STATUS_ERROR_SSH
-		return
+
+		return storage.STATUS_ERROR_SSH
 	}
 	defer client.Close()
+
 	slog.InfoContext(ctx, "created SSH client", slog.Any("deviceID", d.ID))
 
 	interfaces, err := d.getInterfaces(client)
 	if err != nil {
 		slog.ErrorContext(ctx, "error with getting interfaces", slog.Any("deviceID", d.ID), slog.Any("error", err))
-		d.ExitSignal <- storage.STATUS_ERROR_SSH
-		return
+
+		return storage.STATUS_ERROR_SSH
 	}
+
 	slog.InfoContext(ctx, fmt.Sprintf("detected %d interface(s)", len(interfaces)), slog.Any("deviceID", d.ID))
 
 	failedRuns := 0
@@ -74,8 +74,8 @@ CLIENT_CREATION:
 			slog.WarnContext(ctx, fmt.Sprintf("Error limit exceeded (%d errors), trying to reconnect", failedRuns), slog.Any("deviceID", d.ID))
 			if err := client.Close(); err != nil {
 				slog.ErrorContext(ctx, "closing session error", slog.Any("deviceID", d.ID), slog.Any("error", err))
-				d.ExitSignal <- storage.STATUS_ERROR_SSH
-				return
+
+				return storage.STATUS_ERROR_SSH
 			}
 
 			goto CLIENT_CREATION
@@ -85,10 +85,10 @@ CLIENT_CREATION:
 	}
 
 	if failedRuns != 0 {
-		d.ExitSignal <- storage.STATUS_WARNING
+		return storage.STATUS_WARNING
 	}
 
-	d.ExitSignal <- storage.STATUS_OK
+	return storage.STATUS_OK
 }
 
 func (d *remoteDevice) auth() ([]ssh.AuthMethod, error) {
@@ -171,10 +171,10 @@ func (d *remoteDevice) processData(input []byte) (influx.Measurement, error) {
 	}
 
 	return influx.Measurement{
-		Temperature: temperature(decoded),
-		Voltage:     voltage(decoded),
-		TxPower:     txPower(decoded),
-		RxPower:     rxPower(decoded),
-		OSNR:        osnr(decoded),
+		Temperature: decoded.Temperature(),
+		Voltage:     decoded.Voltage(),
+		TxPower:     decoded.TxPower(),
+		RxPower:     decoded.RxPower(),
+		OSNR:        decoded.Osnr(),
 	}, nil
 }

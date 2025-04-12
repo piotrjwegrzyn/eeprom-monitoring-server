@@ -14,23 +14,20 @@ The configured Server periodically gain SFPs' EEPROM data from network hosts. It
 
 ## Project structure
 * `.github/` - GNS3 appliances and resources for README 
-* `backend/` – main alghoritm for extracting EEPROM from network hosts and inserting to InfluxDB
-* `frontend/` – devices' configuration site
+* `ems/` – devices' configuration site and main alghoritm for extracting EEPROM from network hosts and inserting to InfluxDB
 * `generator/` - EEPROM Generator (described later)
 * `presenter/` - EEPROM Presenter (described later)
-* `testdata/` - databasedump, EMS and EG config files
-* `utils/` – common packet for reading config and database interactions 
 
 ## Building from source
 ### Preconditions
 To successfully build all steps it is required to have installed:
 * make
-* Go v1.23.3 or later
+* Go v1.24 or later
 * Docker
 * wget and tar
 
 ### Configuration file
-Sample config file is provided in `testdata/ems.yaml`. It contains server's startup configuration like users, MySQL and InfluxDB databases, and time delays. Adjust `ems-build` step in `Makefile` to build with file from different location.
+Sample configuration is provided in `Dockerfile`. Among the definition of container it also contains server's startup configuration like users, MySQL and InfluxDB databases, and time delays. Adjust `ems-build` step in `Makefile` to build with other values of env variables (via args).
 
 ### Building
 To build EMS and EG run:
@@ -38,7 +35,7 @@ To build EMS and EG run:
 make
 ```
 
-To build generic EP (with scenario from `testdata/generator.yaml` file) run:
+To build generic EP (with scenario from `generator/testdata/generator.yaml` file) run:
 ```
 make sample-presenter
 ```
@@ -145,7 +142,7 @@ Type in terminal:
 ```
 
 ### Config file
-Sample config file is provided in `testdata/generator.yaml`. 
+Sample config file is provided in `generator/testdata/generator.yaml`. 
 In configuration file there is a scenario's duration defined in seconds and modules list. The `Modules` list contains an interface name, CMIS content data and a `Scenario` with a bunch of fiber-working parameters as below:
 
 ```

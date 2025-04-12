@@ -2,8 +2,7 @@ FROM golang:1.24 AS build
 WORKDIR /go/src
 COPY . .
 ENV CGO_ENABLED=0
-RUN go build -C frontend -ldflags="-w -s" -trimpath -o /ems-frontend
-RUN go build -C backend -ldflags="-w -s" -trimpath -o /ems-backend
+RUN go build -C ems -ldflags="-w -s" -trimpath -o /ems-bin
 
 FROM golang:1.24-bookworm AS aio
 LABEL VERSION=latest
@@ -12,7 +11,6 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mariadb-server
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ARG CONFIG=./testdata/ems.yaml
 ARG PORT=80
 
 ENV ADMIN_USER=admin
@@ -37,14 +35,12 @@ ENV INFLUX_HOST=http://localhost
 ENV INFLUX_PORT=8086
 ENV INFLUX_RETENTION=24h
 
-COPY --from=build /ems-frontend /usr/bin/ems-frontend
-COPY --from=build /ems-backend /usr/bin/ems-backend
+COPY --from=build /ems-bin /usr/bin/ems
 COPY ./bin/influxd /usr/bin/influxd
 COPY ./bin/influxc /usr/bin/influx
-COPY ./frontend/static/ ${STATICS_PATH}
-COPY ./frontend/templates/html/ ${TEMPLATES_DIR}
-COPY ./storage/sqlc/migrations/ ${MIGRATIONS_PATH}
-COPY ${CONFIG} /ems/config.yaml
+COPY ./ems/static/ ${STATICS_PATH}
+COPY ./ems/templates/html/ ${TEMPLATES_DIR}
+COPY ./ems/storage/sqlc/migrations/ ${MIGRATIONS_PATH}
 
 RUN service mariadb start & sleep 10 && \
     mysql -u root -e "CREATE USER '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASSWORD}';" && \
@@ -62,8 +58,7 @@ RUN /usr/bin/influxd & sleep 5 && \
     -f -n default --host ${INFLUX_HOST}:${INFLUX_PORT}
 
 ENTRYPOINT /usr/bin/influxd & sleep 10 && service mariadb start & sleep 10 && \
-    /usr/bin/ems-frontend & sleep 10 && \
-    /usr/bin/ems-backend -c /ems/config.yaml & bash
+    /usr/bin/ems & bash
 
 EXPOSE ${PORT}
 EXPOSE ${INFLUX_PORT}
