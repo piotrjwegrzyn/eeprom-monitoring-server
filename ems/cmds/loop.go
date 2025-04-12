@@ -7,18 +7,14 @@ import (
 	"log/slog"
 	"time"
 
-	"pi-wegrzyn/backend/influx"
-	"pi-wegrzyn/storage"
+	"pi-wegrzyn/ems/influx"
+	"pi-wegrzyn/ems/storage"
 )
 
-type Delays struct {
-	Startup float32 `yaml:"startup"`
-	SQL     float32 `yaml:"sql"`
-	SSH     float32 `yaml:"ssh"`
-}
-
 type Config struct {
-	Delays Delays `yaml:"delays"`
+	StartupDelay float32 `envconfig:"STARTUP_DELAY" default:"30.0"`
+	SQLDelay     float32 `envconfig:"SQL_DELAY" default:"30.0"`
+	SSHDelay     float32 `envconfig:"SQL_DELAY" default:"10.0"`
 }
 
 type server struct {
@@ -33,8 +29,8 @@ func NewServer(cfg Config, db *storage.DB, influx *influx.Client) *server {
 }
 
 func (s *server) Loop(ctx context.Context) error {
-	slog.InfoContext(ctx, fmt.Sprintf("startup delay set for %.1f seconds", s.config.Delays.Startup))
-	time.Sleep(time.Duration(s.config.Delays.Startup) * time.Second)
+	slog.InfoContext(ctx, fmt.Sprintf("startup delay set for %.1f seconds", s.config.StartupDelay))
+	time.Sleep(time.Duration(s.config.StartupDelay) * time.Second)
 
 	slog.InfoContext(ctx, "backend module started")
 	for {
@@ -42,8 +38,8 @@ func (s *server) Loop(ctx context.Context) error {
 			return err
 		}
 
-		slog.InfoContext(ctx, fmt.Sprintf("SQL delay set to %.1f seconds", s.config.Delays.SQL))
-		timestamp := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL))
+		slog.InfoContext(ctx, fmt.Sprintf("SQL delay set to %.1f seconds", s.config.SQLDelay))
+		timestamp := time.Now().Add(time.Second * time.Duration(s.config.SQLDelay))
 		for time.Now().Before(timestamp) {
 			continue
 		}
@@ -66,8 +62,8 @@ func (s *server) prepareRemotes(ctx context.Context) error {
 
 		s.remotes = append(s.remotes, c)
 
-		timeLimit := time.Now().Add(time.Second * time.Duration(s.config.Delays.SQL-s.config.Delays.SSH))
-		timeSleep := time.Duration(s.config.Delays.SSH) * time.Second
+		timeLimit := time.Now().Add(time.Second * time.Duration(s.config.SQLDelay-s.config.SSHDelay))
+		timeSleep := time.Duration(s.config.SSHDelay) * time.Second
 
 		go c.Monitor(ctx, s.influx, timeLimit, timeSleep)
 	}
