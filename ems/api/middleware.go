@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	oapi "pi-wegrzyn/frontend/api/oapi/generated"
+	oapi "pi-wegrzyn/ems/api/oapi/generated"
 
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )

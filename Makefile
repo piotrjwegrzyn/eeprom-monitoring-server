@@ -20,8 +20,7 @@ ems-build:
 	--file Dockerfile \
 	--target aio \
 	--tag pi-wegrzyn/ems:$(VERSION) \
-	--tag pi-wegrzyn/ems:latest \
-	--build-arg CONFIG=./testdata/ems.yaml .
+	--tag pi-wegrzyn/ems:latest .
 
 .PHONY: ems-cached
 ems-build-cached:
@@ -29,8 +28,7 @@ ems-build-cached:
 	--file Dockerfile \
 	--target aio \
 	--tag pi-wegrzyn/ems:$(VERSION) \
-	--tag pi-wegrzyn/ems:latest \
-	--build-arg CONFIG=./testdata/ems.yaml .
+	--tag pi-wegrzyn/ems:latest .
 
 .PHONY: generator
 generator:
@@ -51,7 +49,7 @@ sample-presenter: generator sample-eeprom-files presenter
 
 .PHONY: sample-eeprom-files
 sample-eeprom-files:
-	./bin/eeprom-generator -c ./testdata/generator.yaml -o ./bin/eeprom
+	./bin/eeprom-generator -c ./generator/testdata/generator.yaml -o ./bin/eeprom
 
 .PHONY: clean
 clean:

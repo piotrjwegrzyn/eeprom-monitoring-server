@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"time"
 
-	sqlc "pi-wegrzyn/storage/sqlc/generated"
+	sqlc "pi-wegrzyn/ems/storage/sqlc/generated"
 )
 
 type DB struct {

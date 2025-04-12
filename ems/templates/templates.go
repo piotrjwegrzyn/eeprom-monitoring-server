@@ -1,6 +1,6 @@
 package templates
 
-import "pi-wegrzyn/storage"
+import "pi-wegrzyn/ems/storage"
 
 const (
 	IPv4Pattern string = `^((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])$`

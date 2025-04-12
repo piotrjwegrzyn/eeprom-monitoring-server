@@ -11,7 +11,7 @@
 package main
 
 import (
-	"pi-wegrzyn/backend/influx"
+	"pi-wegrzyn/ems/influx"
 	"testing"
 
 	"github.com/kelseyhightower/envconfig"
