@@ -3,18 +3,22 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kelseyhightower/envconfig"
 
-	"pi-wegrzyn/frontend/api"
-	"pi-wegrzyn/frontend/cookies"
-	"pi-wegrzyn/frontend/templates"
-	"pi-wegrzyn/storage"
+	"pi-wegrzyn/ems/api"
+	"pi-wegrzyn/ems/cmds"
+	"pi-wegrzyn/ems/cookies"
+	"pi-wegrzyn/ems/influx"
+	"pi-wegrzyn/ems/storage"
+	"pi-wegrzyn/ems/templates"
 )
 
 type ctxKey string
@@ -27,6 +31,8 @@ type config struct {
 
 	apiConfig    api.Config
 	dbConfig     storage.Config
+	influxConfig influx.Config
+	loopConfig   cmds.Config
 	assetsConfig assetsConfig
 }
 
@@ -56,6 +62,10 @@ func main() {
 		slog.ErrorContext(appCtx, "cannot read assets configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
+	if err := envconfig.Process("INFLUX", &config.influxConfig); err != nil {
+		slog.ErrorContext(appCtx, "cannot read influx configuration", slog.Any("error", err))
+		os.Exit(1)
+	}
 
 	tmplExecutor, err := templates.NewExecutor(config.assetsConfig.TemplatesDir)
 	if err != nil {
@@ -82,6 +92,13 @@ func main() {
 	}
 	defer closeConn()
 
+	influxClient, err := connectToInfluxDB(config.influxConfig)
+	if err != nil {
+		slog.Error("cannot connect to influxdb", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer influxClient.Close()
+
 	cookieStore := cookies.NewStore(15 * time.Minute)
 
 	handler := api.NewServerAPI(
@@ -94,10 +111,24 @@ func main() {
 			Favicon: favicon,
 		},
 	)
+	server := cmds.NewServer(config.loopConfig, storage.New(conn), influx.New(config.influxConfig, influxClient))
+
+	shutdownFunc := func(exitCode int) {
+		appCtx.Done()
+		os.Exit(exitCode)
+	}
+	defer shutdownFunc(0)
+
+	go func() {
+		if err := server.Loop(appCtx); err != nil {
+			slog.ErrorContext(appCtx, "backend failed", slog.Any("error", err))
+			shutdownFunc(1)
+		}
+	}()
 
 	if err := http.ListenAndServe(":"+config.Port, handler); err != nil {
-		slog.ErrorContext(appCtx, "server failed", slog.Any("error", err))
-		os.Exit(1)
+		slog.ErrorContext(appCtx, "http server failed", slog.Any("error", err))
+		shutdownFunc(1)
 	}
 }
 
@@ -114,4 +145,10 @@ func connectToDatabase(config storage.Config) (conn *sql.DB, closeConn func(), e
 	}
 
 	return conn, closeConn, nil
+}
+
+func connectToInfluxDB(cfg influx.Config) (influxdb2.Client, error) {
+	client := influxdb2.NewClient(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), cfg.Token)
+	_, err := client.Health(context.Background())
+	return client, err
 }
