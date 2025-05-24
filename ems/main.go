@@ -14,9 +14,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	"pi-wegrzyn/ems/api"
-	"pi-wegrzyn/ems/cmds"
 	"pi-wegrzyn/ems/cookies"
 	"pi-wegrzyn/ems/influx"
+	"pi-wegrzyn/ems/monitor"
 	"pi-wegrzyn/ems/storage"
 	"pi-wegrzyn/ems/templates"
 )
@@ -26,14 +26,15 @@ type ctxKey string
 const appNameAttr ctxKey = "app"
 
 type config struct {
-	Port     string `envconfig:"APP_PORT" default:"8080"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	Port         string  `envconfig:"APP_PORT" default:"8080"`
+	LogLevel     string  `envconfig:"LOG_LEVEL" default:"info"`
+	StartupDelay float64 `envconfig:"STARTUP_DELAY_SECONDS" default:"10"`
 
-	apiConfig    api.Config
-	dbConfig     storage.Config
-	influxConfig influx.Config
-	loopConfig   cmds.Config
-	assetsConfig assetsConfig
+	apiConfig     api.Config
+	dbConfig      storage.Config
+	influxConfig  influx.Config
+	monitorConfig monitor.Config
+	assetsConfig  assetsConfig
 }
 
 type assetsConfig struct {
@@ -66,6 +67,23 @@ func main() {
 		slog.ErrorContext(appCtx, "cannot read influx configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
+	if err := envconfig.Process("MONITOR", &config.monitorConfig); err != nil {
+		slog.ErrorContext(appCtx, "cannot read influx configuration", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	logLevel := slog.LevelInfo
+	if err := logLevel.UnmarshalText([]byte(config.LogLevel)); err != nil {
+		slog.WarnContext(appCtx, "cannot parse log level, using info", slog.Any("error", err))
+	}
+
+	h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+	slog.SetDefault(slog.New(h))
+
+	slog.InfoContext(appCtx, "startup delay", slog.Float64("seconds", config.StartupDelay))
+	time.Sleep(time.Duration(config.StartupDelay) * time.Second)
 
 	tmplExecutor, err := templates.NewExecutor(config.assetsConfig.TemplatesDir)
 	if err != nil {
@@ -99,34 +117,40 @@ func main() {
 	}
 	defer influxClient.Close()
 
-	cookieStore := cookies.NewStore(15 * time.Minute)
-
-	handler := api.NewServerAPI(
-		config.apiConfig,
+	apiServer := &http.Server{
+		Addr: ":" + config.Port,
+		Handler: api.NewHandler(
+			config.apiConfig,
+			storage.New(conn),
+			cookies.NewStore(15*time.Minute),
+			tmplExecutor,
+			&api.StaticFiles{
+				CSS:     css,
+				Favicon: favicon,
+			},
+		),
+	}
+	monitorServer := monitor.New(
+		config.monitorConfig,
 		storage.New(conn),
-		cookieStore,
-		tmplExecutor,
-		&api.StaticFiles{
-			CSS:     css,
-			Favicon: favicon,
-		},
+		influx.New(config.influxConfig, influxClient),
 	)
-	server := cmds.NewServer(config.loopConfig, storage.New(conn), influx.New(config.influxConfig, influxClient))
 
 	shutdownFunc := func(exitCode int) {
+		apiServer.Shutdown(appCtx)
 		appCtx.Done()
 		os.Exit(exitCode)
 	}
 	defer shutdownFunc(0)
 
 	go func() {
-		if err := server.Loop(appCtx); err != nil {
-			slog.ErrorContext(appCtx, "backend failed", slog.Any("error", err))
+		if err := monitorServer.Run(appCtx); err != nil {
+			slog.ErrorContext(appCtx, "monitor server failed", slog.Any("error", err))
 			shutdownFunc(1)
 		}
 	}()
 
-	if err := http.ListenAndServe(":"+config.Port, handler); err != nil {
+	if err := apiServer.ListenAndServe(); err != nil {
 		slog.ErrorContext(appCtx, "http server failed", slog.Any("error", err))
 		shutdownFunc(1)
 	}

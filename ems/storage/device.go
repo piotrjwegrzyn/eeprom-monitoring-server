@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	STATUS_UNDEFINED = iota - 1
-	STATUS_OK
-	STATUS_ERROR_SSH
-	STATUS_ERROR_KEYFILE
-	STATUS_WARNING
+	StatusUndefined = iota - 1
+	StatusOK
+	StatusErrorSSH
+	StatusErrorKeyfile
+	StatusWarning
 )
 
 type Device struct {
@@ -38,15 +38,15 @@ func (d *Device) StatusConnected() string {
 	connected := d.Connected.Format(time.RFC3339)
 
 	switch d.LastStatus {
-	case STATUS_UNDEFINED:
+	case StatusUndefined:
 		return "STATUS UNDEFINED (NEVER CONNECTED)"
-	case STATUS_OK:
+	case StatusOK:
 		return fmt.Sprintf("STATUS OK (last connection: %s)", connected)
-	case STATUS_ERROR_SSH:
+	case StatusErrorSSH:
 		return fmt.Sprintf("SSH SESSION ERROR (last connection: %s)", connected)
-	case STATUS_ERROR_KEYFILE:
+	case StatusErrorKeyfile:
 		return fmt.Sprintf("KEYFILE ERROR (last connection: %s)", connected)
-	case STATUS_WARNING:
+	case StatusWarning:
 		return fmt.Sprintf("SOME ERRORS OCCURRED (last connection: %s)", connected)
 	default:
 		return "STATUS UNKNOWN"

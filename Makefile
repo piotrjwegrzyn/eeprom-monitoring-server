@@ -22,7 +22,7 @@ ems-build:
 	--tag pi-wegrzyn/ems:$(VERSION) \
 	--tag pi-wegrzyn/ems:latest .
 
-.PHONY: ems-cached
+.PHONY: ems-build-cached
 ems-build-cached:
 	docker build \
 	--file Dockerfile \

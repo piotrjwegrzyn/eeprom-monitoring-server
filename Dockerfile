@@ -11,7 +11,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mariadb-server
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ARG PORT=80
+ARG PORT=8080
 
 ENV ADMIN_USER=admin
 ENV ADMIN_PASSWORD=P@55w0Rd

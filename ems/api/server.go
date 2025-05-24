@@ -39,7 +39,7 @@ type StaticFiles struct {
 	Favicon []byte
 }
 
-type APIServer struct {
+type Server struct {
 	config     Config
 	repository Repository
 	cookies    Cookies
@@ -48,14 +48,14 @@ type APIServer struct {
 	staticFiles *StaticFiles
 }
 
-func NewServerAPI(
+func NewHandler(
 	config Config,
 	repository Repository,
 	cookieStore *cookies.Store,
 	executor *templates.Executor,
 	staticFiles *StaticFiles,
 ) http.Handler {
-	return oapi.Handler(oapi.NewStrictHandler(&APIServer{
+	return oapi.Handler(oapi.NewStrictHandler(&Server{
 		config:      config,
 		repository:  repository,
 		cookies:     cookieStore,
@@ -67,7 +67,7 @@ func NewServerAPI(
 	}))
 }
 
-func (s *APIServer) Get(ctx context.Context, request oapi.GetRequestObject) (oapi.GetResponseObject, error) {
+func (s *Server) Get(ctx context.Context, request oapi.GetRequestObject) (oapi.GetResponseObject, error) {
 	devices, err := s.repository.Devices(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "error getting devices", slog.Any("error", err))
@@ -98,7 +98,7 @@ func (s *APIServer) Get(ctx context.Context, request oapi.GetRequestObject) (oap
 	}, nil
 }
 
-func (s *APIServer) GetEdit(ctx context.Context, request oapi.GetEditRequestObject) (oapi.GetEditResponseObject, error) {
+func (s *Server) GetEdit(ctx context.Context, request oapi.GetEditRequestObject) (oapi.GetEditResponseObject, error) {
 	device, err := s.repository.Device(ctx, request.Params.EditId)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -138,7 +138,7 @@ func (s *APIServer) GetEdit(ctx context.Context, request oapi.GetEditRequestObje
 	}, nil
 }
 
-func (s *APIServer) PostEdit(ctx context.Context, request oapi.PostEditRequestObject) (oapi.PostEditResponseObject, error) {
+func (s *Server) PostEdit(ctx context.Context, request oapi.PostEditRequestObject) (oapi.PostEditResponseObject, error) {
 	form, err := templates.ParseForm(request.Body)
 	if err != nil {
 		slog.ErrorContext(ctx, "error parsing form", slog.Any("error", err))
@@ -211,7 +211,7 @@ func (s *APIServer) PostEdit(ctx context.Context, request oapi.PostEditRequestOb
 	}, nil
 }
 
-func (s *APIServer) postEditError(ctx context.Context, device storage.Device, err error) oapi.PostEditResponseObject {
+func (s *Server) postEditError(ctx context.Context, device storage.Device, err error) oapi.PostEditResponseObject {
 	page, err2 := s.templateEx.ExecuteNewEdit(templates.EditPageContent(device, err.Error()))
 	if err2 != nil {
 		slog.ErrorContext(ctx, "error executing template", slog.Any("error", err2))
@@ -232,7 +232,7 @@ func (s *APIServer) postEditError(ctx context.Context, device storage.Device, er
 	}
 }
 
-func (s *APIServer) GetNew(ctx context.Context, request oapi.GetNewRequestObject) (oapi.GetNewResponseObject, error) {
+func (s *Server) GetNew(ctx context.Context, request oapi.GetNewRequestObject) (oapi.GetNewResponseObject, error) {
 	page, err := s.templateEx.ExecuteNewEdit(templates.NewPageContent())
 	if err != nil {
 		slog.ErrorContext(ctx, "error executing template", slog.Any("error", err))
@@ -252,7 +252,7 @@ func (s *APIServer) GetNew(ctx context.Context, request oapi.GetNewRequestObject
 	}, nil
 }
 
-func (s *APIServer) PostNew(ctx context.Context, request oapi.PostNewRequestObject) (oapi.PostNewResponseObject, error) {
+func (s *Server) PostNew(ctx context.Context, request oapi.PostNewRequestObject) (oapi.PostNewResponseObject, error) {
 	form, err := templates.ParseForm(request.Body)
 	if err != nil {
 		slog.ErrorContext(ctx, "error parsing form", slog.Any("error", err))
@@ -295,7 +295,7 @@ func (s *APIServer) PostNew(ctx context.Context, request oapi.PostNewRequestObje
 	}, nil
 }
 
-func (s *APIServer) postNewError(ctx context.Context, device storage.Device, err error) oapi.PostNewResponseObject {
+func (s *Server) postNewError(ctx context.Context, device storage.Device, err error) oapi.PostNewResponseObject {
 	page, err2 := s.templateEx.ExecuteNewEdit(templates.NewPageContentWithError(device, err.Error()))
 	if err2 != nil {
 		slog.ErrorContext(ctx, "error executing template", slog.Any("error", err2))
@@ -315,7 +315,7 @@ func (s *APIServer) postNewError(ctx context.Context, device storage.Device, err
 	}
 }
 
-func (s *APIServer) PostDelete(ctx context.Context, request oapi.PostDeleteRequestObject) (oapi.PostDeleteResponseObject, error) {
+func (s *Server) PostDelete(ctx context.Context, request oapi.PostDeleteRequestObject) (oapi.PostDeleteResponseObject, error) {
 	err := s.repository.DeleteDevice(ctx, request.Body.DeleteId)
 	switch err {
 	case nil:
@@ -338,7 +338,7 @@ func (s *APIServer) PostDelete(ctx context.Context, request oapi.PostDeleteReque
 	}, nil
 }
 
-func (s *APIServer) GetSignin(ctx context.Context, request oapi.GetSigninRequestObject) (oapi.GetSigninResponseObject, error) {
+func (s *Server) GetSignin(ctx context.Context, request oapi.GetSigninRequestObject) (oapi.GetSigninResponseObject, error) {
 	page, err := s.templateEx.ExecuteSignIn("")
 	if err != nil {
 		slog.ErrorContext(ctx, "error executing template", slog.Any("error", err))
@@ -358,7 +358,7 @@ func (s *APIServer) GetSignin(ctx context.Context, request oapi.GetSigninRequest
 	}, nil
 }
 
-func (s *APIServer) PostSignin(ctx context.Context, request oapi.PostSigninRequestObject) (oapi.PostSigninResponseObject, error) {
+func (s *Server) PostSignin(ctx context.Context, request oapi.PostSigninRequestObject) (oapi.PostSigninResponseObject, error) {
 	login := string(request.Body.Login)
 	password := request.Body.Password
 
@@ -378,7 +378,7 @@ func (s *APIServer) PostSignin(ctx context.Context, request oapi.PostSigninReque
 	return v, nil
 }
 
-func (s *APIServer) postSigninError(ctx context.Context, err error) oapi.PostSigninResponseObject {
+func (s *Server) postSigninError(ctx context.Context, err error) oapi.PostSigninResponseObject {
 	page, err2 := s.templateEx.ExecuteSignIn(err.Error())
 	if err2 != nil {
 		slog.ErrorContext(ctx, "error executing template", slog.Any("error", err2))
@@ -398,7 +398,7 @@ func (s *APIServer) postSigninError(ctx context.Context, err error) oapi.PostSig
 	}
 }
 
-func (s *APIServer) GetLogout(ctx context.Context, request oapi.GetLogoutRequestObject) (oapi.GetLogoutResponseObject, error) {
+func (s *Server) GetLogout(ctx context.Context, request oapi.GetLogoutRequestObject) (oapi.GetLogoutResponseObject, error) {
 	v := LogoutVisiter(func(w http.ResponseWriter) error {
 		s.cookies.Delete(ctx, w, request.Params.SessionToken)
 		w.Header().Add("Location", "/signin")
@@ -410,11 +410,11 @@ func (s *APIServer) GetLogout(ctx context.Context, request oapi.GetLogoutRequest
 	return v, nil
 }
 
-func (s *APIServer) GetStaticStyleCss(ctx context.Context, request oapi.GetStaticStyleCssRequestObject) (oapi.GetStaticStyleCssResponseObject, error) {
+func (s *Server) GetStaticStyleCss(ctx context.Context, request oapi.GetStaticStyleCssRequestObject) (oapi.GetStaticStyleCssResponseObject, error) {
 	return oapi.GetStaticStyleCss200TextcssResponse{Body: bytes.NewReader(s.staticFiles.CSS)}, nil
 }
 
-func (s *APIServer) GetStaticFaviconIco(ctx context.Context, request oapi.GetStaticFaviconIcoRequestObject) (oapi.GetStaticFaviconIcoResponseObject, error) {
+func (s *Server) GetStaticFaviconIco(ctx context.Context, request oapi.GetStaticFaviconIcoRequestObject) (oapi.GetStaticFaviconIcoResponseObject, error) {
 	return oapi.GetStaticFaviconIco200ImagexIconResponse{Body: bytes.NewReader(s.staticFiles.Favicon)}, nil
 }
 
