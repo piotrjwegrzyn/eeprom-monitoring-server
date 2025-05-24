@@ -1,7 +1,0 @@
----
-# Time steps for loop
-delays: # in seconds
-  startup: 10.0
-  sql: 30.0 # syncing with database
-  ssh: 3.0 # polling devices over SSH
-...
