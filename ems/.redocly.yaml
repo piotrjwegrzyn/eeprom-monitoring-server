@@ -1,0 +1,8 @@
+extends:
+  - recommended
+
+rules:
+  info-contact:
+    severity: error
+  info-license:
+    severity: error

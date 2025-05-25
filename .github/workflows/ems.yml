@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ems
+        working-directory: ems/
     steps:
     - uses: actions/checkout@v4
     - name: setup
@@ -30,3 +30,12 @@ jobs:
       uses: golangci/golangci-lint-action@v8
       with:
         version: latest
+        working-directory: ems/
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: redocly lint
+        uses: fluximus-prime/redocly-cli-github-action@v1
+        with:
+          args: 'lint ems/api/oapi/api.yaml'
