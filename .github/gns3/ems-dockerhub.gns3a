@@ -11,7 +11,7 @@
     "status": "stable",
     "maintainer": "Piotr W\u0119grzyn",
     "maintainer_email": "piotr@wegrzyn.dev",
-    "usage": "Connect to DHCP server and setup DHCP on `eth0` in adapter's config.\n\nConfiguration:\thttp://<EMS_IP_ADDRESS>:80/\nInfluxDB:\t\thttp://<EMS_IP_ADDRESS>:8086/\n\nCredentials:\t\tlogin / password",
+    "usage": "Connect to DHCP server and setup DHCP on `eth0` in adapter's config.\n\nConfiguration:\thttp://<EMS_IP_ADDRESS>:8080/\nInfluxDB:\t\thttp://<EMS_IP_ADDRESS>:8086/\n\nCredentials:\t\tadmin / P@55w0Rd",
     "symbol": ":/symbols/affinity/square/blue/statistics.svg",
     "docker": {
         "adapters": 1,

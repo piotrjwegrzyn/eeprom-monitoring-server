@@ -2,7 +2,7 @@ FROM golang:1.24 AS build
 WORKDIR /go/src
 COPY . .
 ENV CGO_ENABLED=0
-RUN go build -C ems -ldflags="-w -s" -trimpath -o /ems-bin
+RUN go build -ldflags="-w -s" -trimpath -o /ems-bin
 
 FROM golang:1.24-bookworm AS aio
 LABEL VERSION=latest
@@ -36,11 +36,11 @@ ENV INFLUX_PORT=8086
 ENV INFLUX_RETENTION=24h
 
 COPY --from=build /ems-bin /usr/bin/ems
-COPY ./bin/influxd /usr/bin/influxd
-COPY ./bin/influxc /usr/bin/influx
-COPY ./ems/static/ ${STATICS_PATH}
-COPY ./ems/templates/html/ ${TEMPLATES_DIR}
-COPY ./ems/storage/sqlc/migrations/ ${MIGRATIONS_PATH}
+COPY bin/influxd /usr/bin/influxd
+COPY bin/influxc /usr/bin/influx
+COPY static/ ${STATICS_PATH}
+COPY templates/html/ ${TEMPLATES_DIR}
+COPY storage/sqlc/migrations/ ${MIGRATIONS_PATH}
 
 RUN service mariadb start & sleep 10 && \
     mysql -u root -e "CREATE USER '${DB_USER}'@'${DB_HOST}' IDENTIFIED BY '${DB_PASSWORD}';" && \

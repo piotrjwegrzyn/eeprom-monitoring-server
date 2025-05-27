@@ -5,15 +5,15 @@ The server for extracting EEPROM data from SFP modules such as temperature, volt
 ### Configuration page
 The server provides a web-based graphical interface that allows administrator to declare which network devices should be queried. Configuration consists of providing host-name, IP address, login and password or key as on picture below.
 
-![frontend_unit.png](.github/frontend_unit.png)
+![frontend_unit.png](.github/readme/frontend_unit.png)
 
 ### Prometheus dashboard
 The configured Server periodically gain SFPs' EEPROM data from network hosts. It is stored in [Influx database](https://www.influxdata.com/). The feature of the Server is to visualize the collected data, particularly over time and in the past.
 
-![backend_unit.png](.github/backend_unit.png)
+![backend_unit.png](.github/readme/backend_unit.png)
 
 ## Project structure
-* `.github/` - GNS3 appliances and resources for README 
+* `.github/` - pipelines, GNS3 appliances, and resources for README 
 * `ems/` – devices' configuration site and main alghoritm for extracting EEPROM from network hosts and inserting to InfluxDB
 * `generator/` - EEPROM Generator (described later)
 * `presenter/` - EEPROM Presenter (described later)
@@ -27,16 +27,20 @@ To successfully build all steps it is required to have installed:
 * wget and tar
 
 ### Configuration file
-Sample configuration is provided in `Dockerfile`. Among the definition of container it also contains server's startup configuration like users, MySQL and InfluxDB databases, and time delays. Adjust `ems-build` step in `Makefile` to build with other values of env variables (via args).
+Sample configuration is provided in `ems/Dockerfile`. Among the definition of container it also contains server's startup configuration like users, MySQL and InfluxDB databases, and time delays. Adjust `ems-build` step in `ems/Makefile` to build with other values of env variables (via args).
 
-### Building
-To build EMS and EG run:
-```
+### Building EMS
+To build EMS:
+```sh
+cd ems/
+
 make
 ```
 
-To build generic EP (with scenario from `generator/testdata/generator.yaml` file) run:
-```
+### Building EP
+
+To build generic EP (with scenario from `generator/testdata/generator.yaml` file) run in main folder:
+```sh
 make sample-presenter
 ```
 
@@ -48,28 +52,31 @@ To develop and run integration tests on database install:
 * sqlc
 * goose
 
-Then simply run database chart:
-```
-skaffold dev -p database
+Then simply run database and influx charts:
+```sh
+cd ems/
+
+skaffold dev -p database,influx
 ```
 
 And perform tests:
-```
+```sh
 DB_NAME=mysql DB_USER=root DB_PASSWORD=root DB_HOST=127.0.0.1 DB_PORT=3306 go test ./storage/... --tags=integration -cover
+
 INFLUX_BUCKET=ems INFLUX_ORG=eeprom-monitoring-server INFLUX_TOKEN=v3rY-d1ff1cUlT-t0k3n INFLUX_HOST=http://127.0.0.1 INFLUX_PORT=8086 go test . --tags=integration -cover
 ```
 
 ## EEPROM Monitoring Server
 ### Pulling from Docker Hub
 The container is already compiled and available on [DockerHub](https://hub.docker.com/r/piotrjwegrzyn/eeprom-monitoring-server). To pull type in terminal:
-```
+```sh
 docker pull piotrjwegrzyn/eeprom-monitoring-server:latest
 ```
 
 ### Usage
 When the Docker container is ready you can start it typing:
-```
-docker run [-ti/d] [--rm] -p 80:<CONFIG_PORT> -p 8086:8086 piotrjwegrzyn/eeprom-monitoring-server:latest
+```sh
+docker run [-ti/d] [--rm] -p 8080:8080 -p 8086:8086 piotrjwegrzyn/eeprom-monitoring-server:latest
 ```
 
 Flags `-ti` or `-d` will determine if container will be started in "Terminal Interaction" mode or "Detached".
@@ -98,13 +105,15 @@ EEPROM_SRC/
 
 ### Build and run
 To build EP type in terminal:
-```
+```sh
+cd presenter/
+
 make presenter
 ```
 The output container will be named as `pi-wegrzyn/ep:<VERSION>`.
 
 To run locally built EP container:
-```
+```sh
 docker run -ti pi-wegrzyn/ep:latest
 ```
 
@@ -130,22 +139,24 @@ Simple tool for generating some EEPROM pages of optical modules based on scenari
 
 ### Build
 To build EG type in terminal:
-```
+```sh
+cd generator/
+
 make generator
 ```
 The output file will be located in `bin/eeprom-generator`.
 
 ### Usage
 Type in terminal:
-```
-./bin/eeprom-generator -c <CONFIG_FILE.yaml> -o <OUTPUT_PATH>
+```sh
+eeprom-generator -c <CONFIG_FILE.yaml> -o <OUTPUT_PATH>
 ```
 
 ### Config file
 Sample config file is provided in `generator/testdata/generator.yaml`. 
 In configuration file there is a scenario's duration defined in seconds and modules list. The `Modules` list contains an interface name, CMIS content data and a `Scenario` with a bunch of fiber-working parameters as below:
 
-```
+```yaml
   Scenario:
     Temperature:
       - endval: 33.0
@@ -157,7 +168,7 @@ In configuration file there is a scenario's duration defined in seconds and modu
 For the first 120 seconds the value of `Temperature` will be interpreted as `33.0` like a linear function with start and end points (X, Y) set as (1, 33.0) and (33.0, 120). Then from the 121st second till the end (120+180) the `Temperature` will slowly decrease like a linear function with starting point (X, Y) as (121, 33.0) and ending point as (300, 32.0).
 
 If there is a need of preparing an instant change we are able to change that defining a one-second-event as the middle step below:
-```
+```yaml
   Scenario:
     Temperature:
       - endval: 33.0
@@ -172,15 +183,15 @@ If there is a need of preparing an instant change we are able to change that def
 
 ## How to run in GNS3's project
 ### EEPROM Monitoring Server
-Preconfigured EMS might be imported directly to GNS using [DockerHub image](https://hub.docker.com/r/piotrjwegrzyn/eeprom-monitoring-server). Download [template file](.github/ems-dockerhub.gns3a) and import to GNS3.
+Preconfigured EMS might be imported directly to GNS using [DockerHub image](https://hub.docker.com/r/piotrjwegrzyn/eeprom-monitoring-server). Download [template file](.github/gns3/ems-dockerhub.gns3a) and import to GNS3.
 
-![gns3.png](.github/gns3.png)
+![gns3.png](.github/readme/gns3.png)
 
 ### EEPROM Monitoring Server - adjusted
 If you need adjusted config file etc. you can prepare container manually. Open shell on your GNS3 server, clone repository, make changes and build as described in previous sections. Then follow [that guide](https://docs.gns3.com/docs/emulators/docker-support-in-gns3).
 
 ### EEPROM Presenter
-Preconfigured EP's with sample EEPROM data might be imported directly to GNS using [DockerHub images](https://hub.docker.com/r/piotrjwegrzyn/eeprom-presenter). Download and import [EP-siteA](.github/ep-site-a-dockerhub.gns3a) and [EP-siteB](.github/ep-site-b-dockerhub.gns3a).
+Preconfigured EP's with sample EEPROM data might be imported directly to GNS using [DockerHub images](https://hub.docker.com/r/piotrjwegrzyn/eeprom-presenter). Download and import [EP-siteA](.github/gns3/ep-site-a-dockerhub.gns3a) and [EP-siteB](.github/gns3/ep-site-b-dockerhub.gns3a).
 
 **Note**: When running in GNS3 do not type `exit` in container's console because it leads to container shutdown.
 

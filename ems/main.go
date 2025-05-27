@@ -137,7 +137,9 @@ func main() {
 	)
 
 	shutdownFunc := func(exitCode int) {
-		apiServer.Shutdown(appCtx)
+		if err := apiServer.Shutdown(appCtx); err != nil {
+			slog.ErrorContext(appCtx, "failed to shutdown api server", slog.Any("error", err))
+		}
 		appCtx.Done()
 		os.Exit(exitCode)
 	}

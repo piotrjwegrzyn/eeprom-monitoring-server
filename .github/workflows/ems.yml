@@ -1,0 +1,41 @@
+name: ems
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths: [ 'ems/**' ]
+
+jobs:
+  golang:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ems/
+    steps:
+    - uses: actions/checkout@v4
+    - name: setup
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+    - name: go mod
+      run: |
+        go mod tidy
+        git diff --exit-code go.mod
+        git diff --exit-code go.sum
+    - name: build
+      run: go build -v ./...
+    - name: test
+      run: go test -v -race ./...
+    - name: lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: latest
+        working-directory: ems/
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: redocly lint
+        uses: fluximus-prime/redocly-cli-github-action@v1
+        with:
+          args: 'lint ems/api/oapi/api.yaml'
