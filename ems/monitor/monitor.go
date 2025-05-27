@@ -94,7 +94,11 @@ func (m Monitor) monitorDevice(ctx context.Context, d remoteDevice) (status int8
 
 		return storage.StatusErrorSSH
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			slog.ErrorContext(ctx, "cannot close client connection", slog.Any("error", err))
+		}
+	}()
 
 	slog.DebugContext(ctx, "created SSH client", slog.Any("deviceID", d.ID))
 

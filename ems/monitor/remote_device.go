@@ -3,6 +3,7 @@ package monitor
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -65,14 +66,18 @@ func (d remoteDevice) getInterfaces(client *ssh.Client) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer session.Close()
+	defer func() {
+		if err := session.Close(); err != nil {
+			slog.Error("cannot close session", slog.Any("error", err))
+		}
+	}()
 
 	got, err := session.CombinedOutput(CmdShowFiberInterfaces)
 	if err != nil {
 		return nil, err
 	}
 
-	infs := strings.SplitN(string(got), "\n", -1)
+	infs := strings.Split(string(got), "\n")
 
 	return infs[:len(infs)-1], nil
 }
@@ -84,7 +89,11 @@ func (d remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string)
 			err = errors.Join(err, fmt.Errorf("%v (interface: %s)", err2, inf))
 			continue
 		}
-		defer session.Close()
+		defer func() {
+			if err := session.Close(); err != nil {
+				slog.Error("cannot close session", slog.Any("error", err))
+			}
+		}()
 
 		got, err2 := session.CombinedOutput(fmt.Sprintf(CmdShowEEPROM, inf))
 		if err2 != nil {

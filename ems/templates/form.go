@@ -62,7 +62,11 @@ func ParseForm(formReader *multipart.Reader) (*Form, error) {
 		if err != nil {
 			break
 		}
-		defer part.Close()
+		defer func() {
+			if err := part.Close(); err != nil {
+				slog.Error("cannot close part", slog.Any("error", err))
+			}
+		}()
 
 		buf := new(bytes.Buffer)
 		if _, err = buf.ReadFrom(part); err != nil {

@@ -6,6 +6,10 @@ info:
     name: GNU General Public License version 3 or later
   version: 0.1.0
 
+servers:
+  - url: http://localhost:8080
+    description: EMS UI
+
 paths:
   /signin:
     get:
@@ -80,6 +84,8 @@ paths:
         500:
           description: Internal server error
           $ref: '#/components/responses/PageError'
+      security:
+      - cookieAuth: []
     post:
       summary: Create new device
       requestBody:
@@ -236,6 +242,8 @@ paths:
         500:
           description: Internal server error
           $ref: '#/components/responses/PageError'
+      security:
+      - cookieAuth: []
 
   /static/favicon.ico:
     get:
@@ -311,3 +319,7 @@ components:
       type: apiKey
       name: session_token
       in: cookie
+
+security:
+  - cookieAuth: []
+
