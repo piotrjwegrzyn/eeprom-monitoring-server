@@ -12,9 +12,9 @@ jobs:
       run:
         working-directory: ems/
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: setup
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: stable
     - name: go mod
@@ -27,7 +27,7 @@ jobs:
     - name: test
       run: go test -v -race ./...
     - name: lint
-      uses: golangci/golangci-lint-action@v8
+      uses: golangci/golangci-lint-action@v9
       with:
         version: latest
         working-directory: ems/

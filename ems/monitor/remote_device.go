@@ -3,6 +3,7 @@ package monitor
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 	"time"
@@ -67,7 +68,7 @@ func (d remoteDevice) getInterfaces(client *ssh.Client) ([]string, error) {
 		return nil, err
 	}
 	defer func() {
-		if err := session.Close(); err != nil {
+		if err := session.Close(); err != nil && !errors.Is(err, io.EOF) {
 			slog.Error("cannot close session", slog.Any("error", err))
 		}
 	}()
@@ -90,7 +91,7 @@ func (d remoteDevice) monitorInterfaces(client *ssh.Client, interfaces []string)
 			continue
 		}
 		defer func() {
-			if err := session.Close(); err != nil {
+			if err := session.Close(); err != nil && !errors.Is(err, io.EOF) {
 				slog.Error("cannot close session", slog.Any("error", err))
 			}
 		}()
