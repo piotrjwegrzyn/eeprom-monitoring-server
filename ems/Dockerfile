@@ -1,10 +1,10 @@
-FROM golang:1.25 AS build
+FROM golang:1.26.1 AS build
 WORKDIR /go/src
 COPY . .
 ENV CGO_ENABLED=0
 RUN go build -ldflags="-w -s" -trimpath -o /ems-bin
 
-FROM golang:1.25-bookworm AS aio
+FROM golang:1.26.1-bookworm AS aio
 LABEL VERSION=latest
 
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -yq mariadb-server

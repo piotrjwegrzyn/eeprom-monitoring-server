@@ -22,7 +22,7 @@ The configured Server periodically gain SFPs' EEPROM data from network hosts. It
 ### Preconditions
 To successfully build all steps it is required to have installed:
 * make
-* Go v1.24 or later
+* Go v1.26.1 or later
 * Docker
 * wget and tar
 
